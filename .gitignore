@@ -1,0 +1,41 @@
+# 🐍 Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 🧪 Entornos virtuales
+venv/
+.env/
+
+# 🔐 Variables de entorno
+.env
+
+# 🐳 Docker
+*.log
+docker-compose.override.yml
+
+# 🧠 IDEs
+.vscode/
+.idea/
+
+# 💻 Sistema (Windows)
+Thumbs.db
+Desktop.ini
+
+# 🐧 Sistema (Linux)
+*.swp
+
+# 📦 Archivos temporales
+*.tmp
+*.bak
+
+# 🧪 Testing
+.coverage
+htmlcov/
+
+# 📁 Base de datos local (por si acaso)
+*.sqlite3
+
+# 📦 node (por si agregas algo después)
+node_modules/
