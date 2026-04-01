@@ -3,7 +3,7 @@ services:
     build: ./backend
     container_name: tonalkab_backend
     ports:
-      - "8000:8000"
+      - "8000:8000" #- "127.0.0.1:8000:8000" en el servidor
     env_file:
       - .env
     depends_on:
