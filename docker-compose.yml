@@ -10,8 +10,8 @@ services:
       - db
     networks:
       - tonalkab_net
-    ports:
-      - "127.0.0.1:8000:8000" # Seguro por defecto
+    #ports:
+    #  - "127.0.0.1:8000:8000" # Seguro por defecto
 
   db:
     image: mysql:8.0
@@ -19,7 +19,9 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      # ... resto de envs
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
     networks:
