@@ -2,8 +2,14 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY ./app /app/app
+# Copiamos primero el requirements para aprovechar la cache de Docker
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install fastapi uvicorn pymysql sqlalchemy cryptography email-validator passlib[bcrypt]==1.7.4 bcrypt==3.2.2 python-jose[cryptography]
+# Ahora copiamos TODO el código (no solo la carpeta app)
+COPY . .
+
+# Le decimos a Python que reconozca la carpeta actual como un módulo
+ENV PYTHONPATH=/app
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

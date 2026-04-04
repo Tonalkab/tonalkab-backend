@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pymysql
+sqlalchemy
+cryptography
+email-validator
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
+python-jose[cryptography]
+google-auth
+requests
