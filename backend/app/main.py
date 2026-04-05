@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 import time
-
 from app.db import Base, engine
 from app.api.user import router as user_router
 from app.api.auth import router as auth_router
 from app.api import maceta
 from app.api import device  # <-- 1. Importar el nuevo módulo
+from app.models import tipo_planta
+from app.models import lectura
 
 app = FastAPI()
 
