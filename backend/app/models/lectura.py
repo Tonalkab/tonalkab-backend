@@ -19,6 +19,3 @@ class LecturaSensores(Base):
     nivel_luz = Column(Integer, nullable=False)
     nivel_agua = Column(Integer, nullable=False)
     voltaje_bateria = Column(DECIMAL(5, 2), nullable=False)
-    
-    # Este campo aparece en tu Documentacion.txt, lo incluimos por seguridad
-    lluvia_detectada = Column(Boolean, default=False, nullable=False)

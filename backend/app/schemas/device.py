@@ -8,4 +8,3 @@ class LecturaCreate(BaseModel):
     nivel_luz: int = 0
     nivel_agua: int = 0
     voltaje_bateria: float = 0.0
-    lluvia_detectada: Optional[bool] = False

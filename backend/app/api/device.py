@@ -74,7 +74,6 @@ def receive_lecturas(
         nivel_luz=lectura.nivel_luz,
         nivel_agua=lectura.nivel_agua,
         voltaje_bateria=lectura.voltaje_bateria,
-        lluvia_detectada=lectura.lluvia_detectada
     )
 
     # 3. GUARDADO EN DB
