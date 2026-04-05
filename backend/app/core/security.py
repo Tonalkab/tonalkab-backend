@@ -3,6 +3,9 @@ from datetime import datetime, timedelta
 from jose import jwt
 import os
 from jose import JWTError
+import secrets
+import hashlib
+
 
 # ==============================
 # PASSWORD HASHING
@@ -60,3 +63,11 @@ def verify_token(token: str):
     except JWTError:
         return None
     
+
+def generate_device_token():
+    return secrets.token_urlsafe(32)  # token largo y seguro
+
+
+def hash_device_token(token: str):
+    return hashlib.sha256(token.encode()).hexdigest()
+

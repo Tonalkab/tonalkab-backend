@@ -1,8 +1,11 @@
 from fastapi import FastAPI
-from app.db import engine, Base
+import time
+
+from app.db import Base, engine
 from app.api.user import router as user_router
 from app.api.auth import router as auth_router
-import time
+from app.api import maceta
+from app.api import device  # <-- 1. Importar el nuevo módulo
 
 app = FastAPI()
 
@@ -17,8 +20,11 @@ def startup():
             print(f"⏳ Esperando MySQL... intento {i+1}")
             time.sleep(3)
 
+# Registrar Routers
 app.include_router(user_router)
 app.include_router(auth_router)
+app.include_router(maceta.router)
+app.include_router(device.router) # <-- 2. Incluir el router de dispositivos
 
 @app.get("/")
 def root():
