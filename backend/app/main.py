@@ -7,6 +7,8 @@ from app.api import maceta
 from app.api import device  # <-- 1. Importar el nuevo módulo
 from app.models import tipo_planta
 from app.models import lectura
+from app.models import conexion 
+from app.api import conexion as api_conexion
 
 app = FastAPI()
 
@@ -26,6 +28,7 @@ app.include_router(user_router)
 app.include_router(auth_router)
 app.include_router(maceta.router)
 app.include_router(device.router) # <-- 2. Incluir el router de dispositivos
+app.include_router(api_conexion.router)
 
 @app.get("/")
 def root():
