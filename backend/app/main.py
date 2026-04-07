@@ -9,6 +9,7 @@ from app.models import tipo_planta
 from app.models import lectura
 from app.models import conexion 
 from app.api import conexion as api_conexion
+from app.models import catalogos_planta
 
 app = FastAPI()
 
