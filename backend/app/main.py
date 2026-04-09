@@ -10,6 +10,9 @@ from app.models import lectura
 from app.models import conexion 
 from app.api import conexion as api_conexion
 from app.models import catalogos_planta
+from app.models import control_riego
+from app.models import configuracion_maceta
+from app.models import predicciones_ml
 
 app = FastAPI()
 
@@ -21,7 +24,7 @@ def startup():
             print("✅ Tablas creadas")
             break
         except Exception as e:
-            print(f"⏳ Esperando MySQL... intento {i+1}")
+            print(f"⏳ Error en BD (intento {i+1}): {e}")
             time.sleep(3)
 
 # Registrar Routers
