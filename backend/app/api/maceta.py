@@ -11,6 +11,10 @@ from app.schemas.device import LecturaResponse
 from app.core.security import generate_device_token, hash_device_token
 from app.api.auth import get_current_user
 
+from app.models.configuracion_maceta import ConfiguracionMaceta
+from app.models.tipo_planta import TipoPlanta
+from app.schemas.maceta import MacetaUpdatePlanta, ConfiguracionCreate
+
 router = APIRouter(prefix="/macetas", tags=["Macetas"])
 
 # ==========================================
@@ -120,3 +124,85 @@ def obtener_historial_lecturas(
                     .all()
 
     return lecturas
+
+# ==========================================
+# ENDPOINT: Cambiar Tipo de Planta
+# ==========================================
+@router.patch("/{id_maceta}/planta")
+def cambiar_planta_maceta(
+    id_maceta: int,
+    datos: MacetaUpdatePlanta,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Permite al usuario indicar que sembró una planta distinta en su maceta.
+    """
+    # 1. Validar que la maceta es del usuario
+    maceta = verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
+
+    # 2. Validar que la nueva planta exista en el catálogo
+    nueva_planta = db.query(TipoPlanta).filter(TipoPlanta.id_tipo_planta == datos.id_tipo_planta).first()
+    if not nueva_planta:
+        raise HTTPException(status_code=404, detail="El tipo de planta especificado no existe en el catálogo.")
+
+    # 3. Actualizar la maceta
+    maceta.id_tipo_planta = datos.id_tipo_planta
+    
+    # 4. LIMPIEZA: Si el usuario cambia de planta, desactivamos cualquier configuración manual 
+    # vieja para que la nueva planta respire con su biología natural por defecto.
+    db.query(ConfiguracionMaceta).filter(
+        ConfiguracionMaceta.id_maceta == id_maceta,
+        ConfiguracionMaceta.activa == True
+    ).update({"activa": False})
+
+    db.commit()
+
+    return {
+        "status": "success", 
+        "message": f"Maceta actualizada. Nueva planta: {nueva_planta.nombre_planta}",
+        "id_tipo_planta": maceta.id_tipo_planta
+    }
+
+# ==========================================
+# ENDPOINT: Forzar Configuración Manual
+# ==========================================
+@router.post("/{id_maceta}/configuracion")
+def establecer_configuracion_manual(
+    id_maceta: int,
+    config: ConfiguracionCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Permite al usuario anular la biología de la planta y establecer sus propios umbrales desde la App.
+    """
+    # 1. Validar propiedad
+    verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
+
+    # 2. Desactivar la configuración anterior (Solo puede haber UNA activa por maceta)
+    db.query(ConfiguracionMaceta).filter(
+        ConfiguracionMaceta.id_maceta == id_maceta,
+        ConfiguracionMaceta.activa == True
+    ).update({"activa": False})
+
+    # 3. Crear la nueva configuración
+    nueva_config = ConfiguracionMaceta(
+        id_maceta=id_maceta,
+        humedad_suelo_min=config.humedad_suelo_min,
+        humedad_suelo_max=config.humedad_suelo_max,
+        tiempo_min_entre_riegos_dias=config.tiempo_min_entre_riegos_dias,
+        modo_operacion=config.modo_operacion,
+        origen_configuracion="usuario",
+        activa=True
+    )
+
+    db.add(nueva_config)
+    db.commit()
+    db.refresh(nueva_config)
+
+    return {
+        "status": "success", 
+        "message": "Configuración manual establecida. El ESP32 la descargará en su próximo ciclo.",
+        "id_configuracion": nueva_config.id_configuracion
+    }
