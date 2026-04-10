@@ -13,6 +13,8 @@ from app.models import catalogos_planta
 from app.models import control_riego
 from app.models import configuracion_maceta
 from app.models import predicciones_ml
+import asyncio
+from app.core.tasks import limpiar_conexiones_inactivas
 
 app = FastAPI()
 
@@ -37,3 +39,20 @@ app.include_router(api_conexion.router)
 @app.get("/")
 def root():
     return {"message": "Tonalkab API funcionando"}
+
+
+
+@app.on_event("startup")
+def startup():
+    for i in range(10):
+        try:
+            Base.metadata.create_all(bind=engine)
+            print("✅ Tablas creadas")
+            break
+        except Exception as e:
+            print(f"⏳ Error en BD (intento {i+1}): {e}")
+            time.sleep(3)
+            
+
+    asyncio.create_task(limpiar_conexiones_inactivas())
+    print("🧹 Tarea de limpieza de conexiones activada")

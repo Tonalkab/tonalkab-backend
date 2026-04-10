@@ -61,8 +61,6 @@ def auth_device(current_device: Maceta = Depends(get_current_device)):
 # ==========================================
 # ENDPOINT: Recepción de Lecturas Sensores
 # ==========================================
-
-
 @router.post("/lecturas")
 def receive_lecturas(
     lectura: LecturaCreate,
@@ -71,7 +69,7 @@ def receive_lecturas(
 ):
     """
     Recibe los datos del ESP32 y analiza si hubo un evento de lluvia
-    utilizando una ventana de tiempo para compensar la percolación del suelo.
+    utilizando una ventana de tiempo de doble capa para compensar la percolación del suelo.
     """
     # 1. GUARDADO NORMAL DE LA LECTURA ACTUAL
     nueva_lectura = LecturaSensores(
@@ -87,63 +85,88 @@ def receive_lecturas(
     db.commit()
     db.refresh(nueva_lectura)
 
-    # 2. ALGORITMO DE DETECCIÓN DE LLUVIA (Ventana de 15 Minutos)
+    # 2. ALGORITMO DE DETECCIÓN DE LLUVIA DE DOBLE CAPA
     evento_lluvia_detectado = False
+    ahora = datetime.utcnow()
     
-    # Definimos nuestra ventana de tiempo hacia el pasado
-    hace_15_min = datetime.utcnow() - timedelta(minutes=15)
+    # Definimos nuestras dos ventanas de tiempo
+    hace_15_min = ahora - timedelta(minutes=15)
+    hace_60_min = ahora - timedelta(minutes=60)
 
-    # Buscamos la humedad MÁS BAJA registrada en esos 15 minutos (el "Valle")
-    humedad_minima_reciente = db.query(func.min(LecturaSensores.humedad_suelo)).filter(
+    # Capa 1: Búsqueda del "Valle" a corto plazo (Aguaceros)
+    humedad_min_15 = db.query(func.min(LecturaSensores.humedad_suelo)).filter(
         LecturaSensores.id_maceta == current_device.id_maceta,
         LecturaSensores.fecha_hora >= hace_15_min
     ).scalar()
 
-    if humedad_minima_reciente is not None:
-        # Calculamos la diferencia desde el punto más bajo hasta la lectura actual (el "Pico")
-        delta_humedad = float(lectura.humedad_suelo) - float(humedad_minima_reciente)
-        
-        # UMBRAL: Si desde el punto más bajo hasta ahora subió más del 8%
-        if delta_humedad > 8.0: 
+    # Capa 2: Búsqueda del "Valle" a largo plazo (Lloviznas)
+    humedad_min_60 = db.query(func.min(LecturaSensores.humedad_suelo)).filter(
+        LecturaSensores.id_maceta == current_device.id_maceta,
+        LecturaSensores.fecha_hora >= hace_60_min
+    ).scalar()
+
+    # Calculamos los incrementos (Deltas)
+    delta_15 = float(lectura.humedad_suelo) - float(humedad_min_15) if humedad_min_15 is not None else 0
+    delta_60 = float(lectura.humedad_suelo) - float(humedad_min_60) if humedad_min_60 is not None else 0
+
+    es_anomalia = False
+    ventana_evaluada = ahora
+    humedad_minima_base = 0
+    delta_final = 0
+
+    # Lógica de disparo: Evaluamos la capa rápida primero, luego la lenta
+    if delta_15 > 8.0:
+        es_anomalia = True
+        ventana_evaluada = hace_15_min
+        humedad_minima_base = float(humedad_min_15)
+        delta_final = delta_15
+    elif delta_60 > 12.0: # Umbral más alto para la ventana larga para evitar ruido de sensores
+        es_anomalia = True
+        ventana_evaluada = hace_60_min
+        humedad_minima_base = float(humedad_min_60)
+        delta_final = delta_60
+
+    # Si cruzamos algún umbral, verificamos que no haya sido nuestra propia bomba
+    if es_anomalia:
+        # Buscamos si la BOMBA se prendió en la misma ventana de tiempo que disparó la alarma
+        riego_reciente = db.query(ControlRiego).filter(
+            ControlRiego.id_maceta == current_device.id_maceta,
+            ControlRiego.fecha_inicio_riego >= ventana_evaluada,
+            ControlRiego.resultado_riego == "exitoso",
+            ControlRiego.id_tipo_activacion != 4 # Excluimos eventos de lluvia anteriores
+        ).first()
+
+        # Si subió la humedad PERO la bomba no fue la responsable... ¡Llovió!
+        if not riego_reciente:
+            evento_lluvia_detectado = True
+            tipo_lluvia = "Aguacero" if ventana_evaluada == hace_15_min else "Llovizna"
+            print(f"🌧️ ¡{tipo_lluvia} DETECTADA! La humedad subió de {humedad_minima_base}% a {lectura.humedad_suelo}%")
             
-            # Verificamos si la BOMBA se prendió en esa misma ventana de tiempo
-            riego_reciente = db.query(ControlRiego).filter(
+            # Buscamos si ya registramos una lluvia en esa ventana para no duplicar registros
+            lluvia_ya_registrada = db.query(ControlRiego).filter(
                 ControlRiego.id_maceta == current_device.id_maceta,
-                ControlRiego.fecha_inicio_riego >= hace_15_min,
-                ControlRiego.resultado_riego == "exitoso"
+                ControlRiego.fecha_inicio_riego >= ventana_evaluada,
+                ControlRiego.id_tipo_activacion == 4 # 4 = Lluvia
             ).first()
 
-            # Si subió gradualmente (o de golpe) PERO la bomba no fue la responsable... ¡Llovió!
-            if not riego_reciente:
-                evento_lluvia_detectado = True
-                print(f"🌧️ ¡LLUVIA DETECTADA! La humedad subió de {humedad_minima_reciente}% a {lectura.humedad_suelo}%")
-                
-                # Para no generar un registro nuevo por cada lectura mientras siga subiendo la humedad,
-                # buscamos si ya registramos una lluvia en los últimos 15 minutos.
-                lluvia_ya_registrada = db.query(ControlRiego).filter(
-                    ControlRiego.id_maceta == current_device.id_maceta,
-                    ControlRiego.fecha_inicio_riego >= hace_15_min,
-                    ControlRiego.id_tipo_activacion == 4 # 4 = Lluvia
-                ).first()
-
-                if not lluvia_ya_registrada:
-                    registro_externo = ControlRiego(
-                        id_maceta=current_device.id_maceta,
-                        fecha_fin_riego=datetime.utcnow(),
-                        humedad_antes=float(humedad_minima_reciente),
-                        humedad_despues=float(lectura.humedad_suelo),
-                        incremento_humedad=delta_humedad,
-                        humedad_objetivo_en_momento=0, 
-                        cantidad_agua_ml=0, 
-                        duracion_bomba=0,
-                        temperatura_en_momento=lectura.temperatura,
-                        luz_en_momento=lectura.nivel_luz,
-                        id_tipo_activacion=4, # 4 = Lluvia / Riego Externo
-                        id_estado_registro=1,
-                        resultado_riego="exitoso"
-                    )
-                    db.add(registro_externo)
-                    db.commit()
+            if not lluvia_ya_registrada:
+                registro_externo = ControlRiego(
+                    id_maceta=current_device.id_maceta,
+                    fecha_fin_riego=datetime.utcnow(),
+                    humedad_antes=humedad_minima_base,
+                    humedad_despues=float(lectura.humedad_suelo),
+                    incremento_humedad=delta_final,
+                    humedad_objetivo_en_momento=0, 
+                    cantidad_agua_ml=0, 
+                    duracion_bomba=0,
+                    temperatura_en_momento=lectura.temperatura,
+                    luz_en_momento=lectura.nivel_luz,
+                    id_tipo_activacion=4, # 4 = Lluvia / Riego Externo
+                    id_estado_registro=1,
+                    resultado_riego="exitoso"
+                )
+                db.add(registro_externo)
+                db.commit()
 
     return {
         "status": "success", 
@@ -211,8 +234,6 @@ def obtener_configuracion_edge(
         "horas_desde_ultimo_riego": horas_inactivo
     }
 
-
-
 @router.post("/riego")
 def reportar_riego_ejecutado(
     reporte: RiegoReportCreate,
@@ -252,8 +273,5 @@ def reportar_riego_ejecutado(
     db.add(nuevo_riego)
     db.commit()
     db.refresh(nuevo_riego)
-
-    # Nota: Aquí podríamos disparar la lógica de "Lluvia" si vemos que la bomba duró 0s 
-    # pero la humedad subió, o manejarlo en el endpoint de lecturas generales.
 
     return {"status": "success", "id_riego": nuevo_riego.id_riego, "agua_ml": cantidad_agua_usada}
