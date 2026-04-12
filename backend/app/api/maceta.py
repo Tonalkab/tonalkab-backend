@@ -14,6 +14,7 @@ from app.api.auth import get_current_user
 from app.models.configuracion_maceta import ConfiguracionMaceta
 from app.models.tipo_planta import TipoPlanta
 from app.schemas.maceta import MacetaUpdatePlanta, ConfiguracionCreate
+from app.schemas.maceta import MacetaCreate, MacetaResponse, MacetaUpdatePlanta, ConfiguracionCreate
 
 router = APIRouter(prefix="/macetas", tags=["Macetas"])
 
