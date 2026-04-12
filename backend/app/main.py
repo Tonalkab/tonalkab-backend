@@ -15,6 +15,7 @@ from app.models import configuracion_maceta
 from app.models import predicciones_ml
 import asyncio
 from app.core.tasks import limpiar_conexiones_inactivas
+from app.api import catalogos
 
 app = FastAPI()
 
@@ -35,6 +36,7 @@ app.include_router(auth_router)
 app.include_router(maceta.router)
 app.include_router(device.router) # <-- 2. Incluir el router de dispositivos
 app.include_router(api_conexion.router)
+app.include_router(catalogos.router)
 
 @app.get("/")
 def root():
