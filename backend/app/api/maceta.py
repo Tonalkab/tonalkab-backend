@@ -206,3 +206,19 @@ def establecer_configuracion_manual(
         "message": "Configuración manual establecida. El ESP32 la descargará en su próximo ciclo.",
         "id_configuracion": nueva_config.id_configuracion
     }
+
+# app/api/maceta.py
+
+@router.get("/", response_model=List[MacetaResponse])
+def listar_macetas(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Retorna todas las macetas que pertenecen al usuario autenticado. [cite: 65, 114]
+    """
+    macetas = db.query(Maceta).filter(
+        Maceta.id_usuario == current_user.id_usuario
+    ).all()
+    
+    return macetas
