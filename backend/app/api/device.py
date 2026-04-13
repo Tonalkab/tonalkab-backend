@@ -10,6 +10,7 @@ from app.models.tipo_planta import TipoPlanta
 from app.models.control_riego import ControlRiego
 from app.models.configuracion_maceta import ConfiguracionMaceta
 from app.models.predicciones_ml import PrediccionesML
+from app.models.alerta import Alerta  # <-- Importación del modelo de alertas
 
 from app.core.security import hash_device_token
 # IMPORTANTE: Asegúrate de añadir RiegoReportCreate a tu app/schemas/device.py como hicimos en el paso anterior
@@ -70,6 +71,7 @@ def receive_lecturas(
     """
     Recibe los datos del ESP32 y analiza si hubo un evento de lluvia
     utilizando una ventana de tiempo de doble capa para compensar la percolación del suelo.
+    Genera alertas en caso de detectar anomalías críticas.
     """
     # 1. GUARDADO NORMAL DE LA LECTURA ACTUAL
     nueva_lectura = LecturaSensores(
@@ -167,6 +169,56 @@ def receive_lecturas(
                 )
                 db.add(registro_externo)
                 db.commit()
+
+    # ==========================================
+    # 3. SISTEMA REACTIVO DE ALERTAS (NUEVO)
+    # ==========================================
+    
+    # Obtenemos los umbrales de la planta para saber cuándo quejarnos
+    config_maceta = obtener_configuracion_edge(current_device, db)
+
+    def disparar_alerta(id_tipo, prioridad, mensaje_alerta):
+        """Función auxiliar con sistema Anti-Spam"""
+        alerta_existente = db.query(Alerta).filter(
+            Alerta.id_maceta == current_device.id_maceta,
+            Alerta.id_tipo_alerta == id_tipo,
+            Alerta.id_estado_alerta == 1 # 1 = Pendiente
+        ).first()
+        
+        if not alerta_existente:
+            nueva_alerta = Alerta(
+                id_maceta=current_device.id_maceta,
+                id_tipo_alerta=id_tipo,
+                mensaje=mensaje_alerta,
+                id_estado_alerta=1, # Siempre nace como Pendiente
+                id_prioridad_alerta=prioridad
+            )
+            db.add(nueva_alerta)
+            db.commit()
+
+    # A. Humedad Baja (Prioridad 3 = Alta)
+    if float(lectura.humedad_suelo) < config_maceta["humedad_suelo_min"]:
+        disparar_alerta(
+            id_tipo=1, 
+            prioridad=3, 
+            mensaje_alerta=f"Humedad crítica: {lectura.humedad_suelo}% (El mínimo vital es {config_maceta['humedad_suelo_min']}%)"
+        )
+
+    # B. Batería Baja (Prioridad 2 = Media)
+    if 0.0 < float(lectura.voltaje_bateria) < 3.3:
+        disparar_alerta(
+            id_tipo=2, 
+            prioridad=2, 
+            mensaje_alerta=f"Batería baja ({lectura.voltaje_bateria}V). Revisa el panel solar de la maceta."
+        )
+
+    # C. Depósito de Agua Vacío (Prioridad 3 = Alta)
+    if int(lectura.nivel_agua) < 10:
+        disparar_alerta(
+            id_tipo=4, 
+            prioridad=3, 
+            mensaje_alerta="El depósito de agua está casi vacío. Rellénalo para que el riego autónomo no se detenga."
+        )
 
     return {
         "status": "success", 
