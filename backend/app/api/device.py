@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Security
+from fastapi import APIRouter, Depends, HTTPException, Security, BackgroundTasks # <-- NUEVO: Importamos BackgroundTasks
 from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
+from sqlalchemy import func
 
 from app.db import get_db
 from app.models.maceta import Maceta
@@ -10,13 +11,12 @@ from app.models.tipo_planta import TipoPlanta
 from app.models.control_riego import ControlRiego
 from app.models.configuracion_maceta import ConfiguracionMaceta
 from app.models.predicciones_ml import PrediccionesML
-from app.models.alerta import Alerta  # <-- Importación del modelo de alertas
-
+from app.models.alerta import Alerta 
 from app.core.security import hash_device_token
-# IMPORTANTE: Asegúrate de añadir RiegoReportCreate a tu app/schemas/device.py como hicimos en el paso anterior
 from app.schemas.device import LecturaCreate, DeviceConfigResponse, RiegoReportCreate
 
-from sqlalchemy import func
+# --- NUEVO: Importamos el cerebro de tu IA ---
+from app.ml.inference import generar_prediccion_riego 
 
 # Configuración del Router y Seguridad
 router = APIRouter(prefix="/devices", tags=["Dispositivos IoT (ESP32)"])
@@ -65,13 +65,14 @@ def auth_device(current_device: Maceta = Depends(get_current_device)):
 @router.post("/lecturas")
 def receive_lecturas(
     lectura: LecturaCreate,
+    background_tasks: BackgroundTasks, # <-- NUEVO: Inyectamos el manejador de tareas en segundo plano
     current_device: Maceta = Depends(get_current_device),
     db: Session = Depends(get_db)
 ):
     """
     Recibe los datos del ESP32 y analiza si hubo un evento de lluvia
     utilizando una ventana de tiempo de doble capa para compensar la percolación del suelo.
-    Genera alertas en caso de detectar anomalías críticas.
+    Genera alertas en caso de detectar anomalías críticas y dispara la IA.
     """
     # 1. GUARDADO NORMAL DE LA LECTURA ACTUAL
     nueva_lectura = LecturaSensores(
@@ -171,7 +172,7 @@ def receive_lecturas(
                 db.commit()
 
     # ==========================================
-    # 3. SISTEMA REACTIVO DE ALERTAS (NUEVO)
+    # 3. SISTEMA REACTIVO DE ALERTAS 
     # ==========================================
     
     # Obtenemos los umbrales de la planta para saber cuándo quejarnos
@@ -219,6 +220,10 @@ def receive_lecturas(
             prioridad=3, 
             mensaje_alerta="El depósito de agua está casi vacío. Rellénalo para que el riego autónomo no se detenga."
         )
+
+    # --- NUEVO: 4. EL GATILLO DE LA IA EN SEGUNDO PLANO ---
+    # Esto ocurre sin bloquear la respuesta del servidor al ESP32
+    background_tasks.add_task(generar_prediccion_riego, current_device.id_maceta, db)
 
     return {
         "status": "success", 

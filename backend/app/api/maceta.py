@@ -1,20 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List, Optional
 
+# Dependencias y Modelos principales
 from app.db import get_db
+from app.api.auth import get_current_user
+from app.core.security import generate_device_token, hash_device_token
+
 from app.models.maceta import Maceta
 from app.models.lectura import LecturaSensores
-from app.schemas.maceta import MacetaCreate
-from app.schemas.device import LecturaResponse 
-from app.core.security import generate_device_token, hash_device_token
-from app.api.auth import get_current_user
-
 from app.models.configuracion_maceta import ConfiguracionMaceta
 from app.models.tipo_planta import TipoPlanta
-from app.schemas.maceta import MacetaUpdatePlanta, ConfiguracionCreate
-from app.schemas.maceta import MacetaCreate, MacetaResponse, MacetaUpdatePlanta, ConfiguracionCreate
+from app.models.skin import UsuarioSkin, MacetaSkin
+
+# Esquemas (Pydantic) - IMPORTACIÓN ACTUALIZADA
+from app.schemas.maceta import MacetaCreate, MacetaResponse, MacetaCreateResponse, MacetaUpdatePlanta, ConfiguracionCreate
+from app.schemas.device import LecturaResponse 
 
 router = APIRouter(prefix="/macetas", tags=["Macetas"])
 
@@ -36,22 +38,22 @@ def verificar_propiedad_maceta(id_maceta: int, id_usuario: int, db: Session):
     return maceta
 
 # ==========================================
-# ENDPOINT: Crear Maceta
+# ENDPOINT: Crear Maceta (Unificado y Seguro)
 # ==========================================
-@router.post("/")
-def create_maceta(
+@router.post("/", response_model=MacetaCreateResponse) # <-- SE USA EL NUEVO ESQUEMA
+def registrar_maceta(
     maceta_data: MacetaCreate,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    # 1. Generar token plano
-    token = generate_device_token()
+    """Registra una maceta, genera su token de hardware y le asigna la skin por defecto."""
+    
+    # 1. Generar token plano y su hash
+    token_plano = generate_device_token()
+    token_hash = hash_device_token(token_plano)
 
-    # 2. Hashear token
-    token_hash = hash_device_token(token)
-
-    # 3. Crear maceta
-    nueva_maceta = Maceta(
+    # 2. Crear registro de la maceta
+    db_maceta = Maceta(
         id_usuario=current_user.id_usuario,
         nombre_maceta=maceta_data.nombre_maceta,
         token_hash=token_hash,
@@ -61,16 +63,43 @@ def create_maceta(
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
+    db.add(db_maceta)
+    db.flush() 
 
-    db.add(nueva_maceta)
+    # 3. Asignar y equipar la skin predefinida (ID 1)
+    skin_inicial = MacetaSkin(
+        id_maceta=db_maceta.id_maceta,
+        id_skin=1, 
+        equipado=True 
+    )
+    db.add(skin_inicial)
+    
+    # 4. Guardar en base de datos
     db.commit()
-    db.refresh(nueva_maceta)
+    db.refresh(db_maceta)
+    
+    # 5. Forzar la carga de la relación para que Pydantic no devuelva "null"
+    _ = db_maceta.skins_maceta 
 
-    # 4. Retornar token SOLO UNA VEZ
-    return {
-        "id_maceta": nueva_maceta.id_maceta,
-        "token": token
-    }
+    # 6. INYECTAR EL TOKEN PLANO para que el esquema lo devuelva al usuario
+    db_maceta.token = token_plano
+
+    return db_maceta
+
+# ==========================================
+# ENDPOINT: Listar Macetas
+# ==========================================
+@router.get("/", response_model=List[MacetaResponse])
+def listar_macetas(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Retorna todas las macetas que pertenecen al usuario autenticado."""
+    macetas = db.query(Maceta).filter(
+        Maceta.id_usuario == current_user.id_usuario
+    ).all()
+    
+    return macetas
 
 # ==========================================
 # ENDPOINT: Lectura Actual (Tiempo Real)
@@ -79,11 +108,10 @@ def create_maceta(
 def obtener_lectura_actual(
     id_maceta: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)):
-    # 1. Validar propiedad
+    current_user = Depends(get_current_user)
+):
     verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
 
-    # 2. Obtener solo la última lectura
     lectura = db.query(LecturaSensores)\
                 .filter(LecturaSensores.id_maceta == id_maceta)\
                 .order_by(LecturaSensores.fecha_hora.desc())\
@@ -95,7 +123,7 @@ def obtener_lectura_actual(
     return lectura
 
 # ==========================================
-# ENDPOINT: Historial de Lecturas (Paginado y Filtrado)
+# ENDPOINT: Historial de Lecturas
 # ==========================================
 @router.get("/{id_maceta}/lecturas/historial", response_model=List[LecturaResponse])
 def obtener_historial_lecturas(
@@ -105,20 +133,17 @@ def obtener_historial_lecturas(
     limit: int = Query(50, ge=1, le=1000, description="Cantidad máxima de registros"),
     offset: int = Query(0, ge=0, description="Registros a omitir (paginación)"),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)):
-    # 1. Validar propiedad
+    current_user = Depends(get_current_user)
+):
     verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
 
-    # 2. Construir la consulta base
     query = db.query(LecturaSensores).filter(LecturaSensores.id_maceta == id_maceta)
 
-    # 3. Aplicar filtros de fecha dinámicamente
     if fecha_inicio:
         query = query.filter(LecturaSensores.fecha_hora >= fecha_inicio)
     if fecha_fin:
         query = query.filter(LecturaSensores.fecha_hora <= fecha_fin)
 
-    # 4. Ordenar descendente, aplicar paginación y ejecutar
     lecturas = query.order_by(LecturaSensores.fecha_hora.desc())\
                     .offset(offset)\
                     .limit(limit)\
@@ -136,22 +161,14 @@ def cambiar_planta_maceta(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    """
-    Permite al usuario indicar que sembró una planta distinta en su maceta.
-    """
-    # 1. Validar que la maceta es del usuario
     maceta = verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
 
-    # 2. Validar que la nueva planta exista en el catálogo
     nueva_planta = db.query(TipoPlanta).filter(TipoPlanta.id_tipo_planta == datos.id_tipo_planta).first()
     if not nueva_planta:
-        raise HTTPException(status_code=404, detail="El tipo de planta especificado no existe en el catálogo.")
+        raise HTTPException(status_code=404, detail="El tipo de planta no existe en el catálogo.")
 
-    # 3. Actualizar la maceta
     maceta.id_tipo_planta = datos.id_tipo_planta
     
-    # 4. LIMPIEZA: Si el usuario cambia de planta, desactivamos cualquier configuración manual 
-    # vieja para que la nueva planta respire con su biología natural por defecto.
     db.query(ConfiguracionMaceta).filter(
         ConfiguracionMaceta.id_maceta == id_maceta,
         ConfiguracionMaceta.activa == True
@@ -175,19 +192,13 @@ def establecer_configuracion_manual(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    """
-    Permite al usuario anular la biología de la planta y establecer sus propios umbrales desde la App.
-    """
-    # 1. Validar propiedad
     verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
 
-    # 2. Desactivar la configuración anterior (Solo puede haber UNA activa por maceta)
     db.query(ConfiguracionMaceta).filter(
         ConfiguracionMaceta.id_maceta == id_maceta,
         ConfiguracionMaceta.activa == True
     ).update({"activa": False})
 
-    # 3. Crear la nueva configuración
     nueva_config = ConfiguracionMaceta(
         id_maceta=id_maceta,
         humedad_suelo_min=config.humedad_suelo_min,
@@ -208,18 +219,43 @@ def establecer_configuracion_manual(
         "id_configuracion": nueva_config.id_configuracion
     }
 
-# app/api/maceta.py
-
-@router.get("/", response_model=List[MacetaResponse])
-def listar_macetas(
-    db: Session = Depends(get_db),
+# ==========================================
+# ENDPOINT: Equipar Skin en la Maceta
+# ==========================================
+@router.post("/{id_maceta}/skins/{id_skin}/equipar")
+def cambiar_skin_maceta(
+    id_maceta: int, 
+    id_skin: int, 
+    db: Session = Depends(get_db), 
     current_user = Depends(get_current_user)
 ):
-    """
-    Retorna todas las macetas que pertenecen al usuario autenticado. [cite: 65, 114]
-    """
-    macetas = db.query(Maceta).filter(
-        Maceta.id_usuario == current_user.id_usuario
-    ).all()
-    
-    return macetas
+    maceta = verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
+
+    skin_desbloqueada = db.query(UsuarioSkin).filter(
+        UsuarioSkin.id_usuario == current_user.id_usuario,
+        UsuarioSkin.id_skin == id_skin
+    ).first()
+
+    if not skin_desbloqueada:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Primero debes desbloquear esta skin para poder usarla en tus macetas"
+        )
+
+    skin_maceta = db.query(MacetaSkin).filter(
+        MacetaSkin.id_maceta == id_maceta,
+        MacetaSkin.id_skin == id_skin
+    ).first()
+
+    if not skin_maceta:
+        skin_maceta = MacetaSkin(id_maceta=id_maceta, id_skin=id_skin, equipado=False)
+        db.add(skin_maceta)
+
+    db.query(MacetaSkin).filter(
+        MacetaSkin.id_maceta == id_maceta
+    ).update({"equipado": False})
+
+    skin_maceta.equipado = True
+    db.commit()
+
+    return {"message": f"Skin actualizada exitosamente para la maceta {maceta.nombre_maceta}"}

@@ -9,3 +9,7 @@ bcrypt==3.2.2
 python-jose[cryptography]
 google-auth
 requests
+pandas==2.1.0
+scikit-learn==1.8.0
+joblib==1.3.2
+numpy==1.26.4

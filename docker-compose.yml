@@ -13,6 +13,7 @@ services:
     ports:
       - "127.0.0.1:8000:8000" # Seguro por defecto para VPS
 
+
   db:
     image: mysql:8.0
     container_name: tonalkab_db
