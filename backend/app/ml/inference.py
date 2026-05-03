@@ -5,6 +5,7 @@ from app.models.lectura import LecturaSensores
 from app.models.predicciones_ml import PrediccionesML
 from app.models.configuracion_maceta import ConfiguracionMaceta
 from app.models.tipo_planta import TipoPlanta
+from app.models.maceta import Maceta
 
 # Cargamos el cerebro de la IA al iniciar el servidor
 model_path = "app/ml/modelo_riego_tonalkab.pkl"
