@@ -23,6 +23,11 @@ class TipoPlantaResponse(BaseModel):
     # Textos y fotos que le sirven a la App
     descripcion: Optional[str] = None
     imagen_url: Optional[str] = None
+    
+    # 👇 ESTOS SON LOS CAMPOS QUE DEBES AGREGAR 👇
+    historia: Optional[str] = None
+    origen_geografico: Optional[str] = None
+    cuidados_generales: Optional[str] = None
 
     class Config:
         from_attributes = True
