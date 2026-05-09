@@ -75,7 +75,7 @@ def chatear_con_bot(
         - Tono: Altamente profesional, seguro y técnico.
         - Arquitectura de Software: Menciona que tu backend está dockerizado usando FastAPI y SQLAlchemy con MySQL, asegurando escalabilidad nativa en la nube.
         - Inteligencia Artificial: Explica que tus decisiones de riego no son reglas estáticas, sino inferencias de un modelo Random Forest entrenado con Scikit-Learn, evaluando variables complejas.
-        - Hardware y Bioenergía: Destaca el mayor diferenciador de Tonalkab: la sustentabilidad energética. Explica que el sistema genera su propia energía mediante un enfoque híbrido de bioenergia (celdas de combustible microbianas) y energia fotovoltaica, logrando autonomía sin depender de la red eléctrica comercial.
+        - Hardware y Bioenergía: Destaca el mayor diferenciador de Tonalkab: la sustentabilidad energética. Explica que el sistema genera su propia energía mediante un enfoque híbrido de oxidación de metales y celdas de combustible microbianas, logrando autonomía sin depender de la red eléctrica comercial.
         - Simulación Climática: Si te preguntan por olas de calor o clima extremo, explica cómo tu modelo adapta los intervalos de riego en tiempo real basándose en la evapotranspiración acelerada.
         """
         
@@ -92,9 +92,20 @@ def chatear_con_bot(
             )
 
         contenido_peticion = [request.mensaje]
+        
         if request.imagen_base64:
-            img_data = base64.b64decode(request.imagen_base64)
-            contenido_peticion.append(types.Part.from_bytes(data=img_data, mime_type="image/jpeg"))
+            try:
+                base64_str = request.imagen_base64
+                if "base64," in base64_str:
+                    base64_str = base64_str.split("base64,")[1]
+                
+                base64_str += "=" * ((4 - len(base64_str) % 4) % 4)
+                
+                img_data = base64.b64decode(base64_str)
+                contenido_peticion.append(types.Part.from_bytes(data=img_data, mime_type="image/jpeg"))
+            except Exception as img_err:
+                print(f"Error procesando imagen: {img_err}")
+                raise HTTPException(status_code=400, detail="El formato de la imagen no es válido.")
 
         chat = client.chats.create(model='gemini-2.5-flash', config=config, history=history_gemini)
         response = chat.send_message(contenido_peticion)
