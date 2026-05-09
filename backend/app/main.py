@@ -1,3 +1,4 @@
+from app.api import bot
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles 
 import time
@@ -73,6 +74,10 @@ app.include_router(api_conexion.router)
 app.include_router(catalogos.router)
 app.include_router(api_alerta.router)
 app.include_router(skins.router) 
+app.include_router(user_router)
+app.include_router(auth_router)
+app.include_router(maceta.router)
+app.include_router(bot.router)
 
 @app.get("/")
 def root():
