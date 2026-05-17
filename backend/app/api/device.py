@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Security, BackgroundTasks # <-- NUEVO: Importamos BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Security, BackgroundTasks 
 from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -15,7 +15,7 @@ from app.models.alerta import Alerta
 from app.core.security import hash_device_token
 from app.schemas.device import LecturaCreate, DeviceConfigResponse, RiegoReportCreate
 
-# --- NUEVO: Importamos el cerebro de tu IA ---
+# Motor de inferencia
 from app.ml.inference import generar_prediccion_riego 
 
 # Configuración del Router y Seguridad
@@ -65,7 +65,7 @@ def auth_device(current_device: Maceta = Depends(get_current_device)):
 @router.post("/lecturas")
 def receive_lecturas(
     lectura: LecturaCreate,
-    background_tasks: BackgroundTasks, # <-- NUEVO: Inyectamos el manejador de tareas en segundo plano
+    background_tasks: BackgroundTasks, 
     current_device: Maceta = Depends(get_current_device),
     db: Session = Depends(get_db)
 ):
@@ -123,7 +123,7 @@ def receive_lecturas(
         ventana_evaluada = hace_15_min
         humedad_minima_base = float(humedad_min_15)
         delta_final = delta_15
-    elif delta_60 > 12.0: # Umbral más alto para la ventana larga para evitar ruido de sensores
+    elif delta_60 > 12.0: 
         es_anomalia = True
         ventana_evaluada = hace_60_min
         humedad_minima_base = float(humedad_min_60)
@@ -131,25 +131,22 @@ def receive_lecturas(
 
     # Si cruzamos algún umbral, verificamos que no haya sido nuestra propia bomba
     if es_anomalia:
-        # Buscamos si la BOMBA se prendió en la misma ventana de tiempo que disparó la alarma
         riego_reciente = db.query(ControlRiego).filter(
             ControlRiego.id_maceta == current_device.id_maceta,
             ControlRiego.fecha_inicio_riego >= ventana_evaluada,
             ControlRiego.resultado_riego == "exitoso",
-            ControlRiego.id_tipo_activacion != 4 # Excluimos eventos de lluvia anteriores
+            ControlRiego.id_tipo_activacion != 4 
         ).first()
 
-        # Si subió la humedad PERO la bomba no fue la responsable... ¡Llovió!
         if not riego_reciente:
             evento_lluvia_detectado = True
             tipo_lluvia = "Aguacero" if ventana_evaluada == hace_15_min else "Llovizna"
             print(f"🌧️ ¡{tipo_lluvia} DETECTADA! La humedad subió de {humedad_minima_base}% a {lectura.humedad_suelo}%")
             
-            # Buscamos si ya registramos una lluvia en esa ventana para no duplicar registros
             lluvia_ya_registrada = db.query(ControlRiego).filter(
                 ControlRiego.id_maceta == current_device.id_maceta,
                 ControlRiego.fecha_inicio_riego >= ventana_evaluada,
-                ControlRiego.id_tipo_activacion == 4 # 4 = Lluvia
+                ControlRiego.id_tipo_activacion == 4 
             ).first()
 
             if not lluvia_ya_registrada:
@@ -160,11 +157,11 @@ def receive_lecturas(
                     humedad_despues=float(lectura.humedad_suelo),
                     incremento_humedad=delta_final,
                     humedad_objetivo_en_momento=0, 
-                    cantidad_agua_ml=0, 
+                    amount_agua_ml=0, 
                     duracion_bomba=0,
                     temperatura_en_momento=lectura.temperatura,
                     luz_en_momento=lectura.nivel_luz,
-                    id_tipo_activacion=4, # 4 = Lluvia / Riego Externo
+                    id_tipo_activacion=4, 
                     id_estado_registro=1,
                     resultado_riego="exitoso"
                 )
@@ -174,16 +171,13 @@ def receive_lecturas(
     # ==========================================
     # 3. SISTEMA REACTIVO DE ALERTAS 
     # ==========================================
-    
-    # Obtenemos los umbrales de la planta para saber cuándo quejarnos
     config_maceta = obtener_configuracion_edge(current_device, db)
 
     def disparar_alerta(id_tipo, prioridad, mensaje_alerta):
-        """Función auxiliar con sistema Anti-Spam"""
         alerta_existente = db.query(Alerta).filter(
             Alerta.id_maceta == current_device.id_maceta,
             Alerta.id_tipo_alerta == id_tipo,
-            Alerta.id_estado_alerta == 1 # 1 = Pendiente
+            Alerta.id_estado_alerta == 1 
         ).first()
         
         if not alerta_existente:
@@ -191,13 +185,12 @@ def receive_lecturas(
                 id_maceta=current_device.id_maceta,
                 id_tipo_alerta=id_tipo,
                 mensaje=mensaje_alerta,
-                id_estado_alerta=1, # Siempre nace como Pendiente
+                id_estado_alerta=1, 
                 id_prioridad_alerta=prioridad
             )
             db.add(nueva_alerta)
             db.commit()
 
-    # A. Humedad Baja (Prioridad 3 = Alta)
     if float(lectura.humedad_suelo) < config_maceta["humedad_suelo_min"]:
         disparar_alerta(
             id_tipo=1, 
@@ -205,7 +198,6 @@ def receive_lecturas(
             mensaje_alerta=f"Humedad crítica: {lectura.humedad_suelo}% (El mínimo vital es {config_maceta['humedad_suelo_min']}%)"
         )
 
-    # B. Batería Baja (Prioridad 2 = Media)
     if 0.0 < float(lectura.voltaje_bateria) < 3.3:
         disparar_alerta(
             id_tipo=2, 
@@ -213,7 +205,6 @@ def receive_lecturas(
             mensaje_alerta=f"Batería baja ({lectura.voltaje_bateria}V). Revisa el panel solar de la maceta."
         )
 
-    # C. Depósito de Agua Vacío (Prioridad 3 = Alta)
     if int(lectura.nivel_agua) < 10:
         disparar_alerta(
             id_tipo=4, 
@@ -221,8 +212,7 @@ def receive_lecturas(
             mensaje_alerta="El depósito de agua está casi vacío. Rellénalo para que el riego autónomo no se detenga."
         )
 
-    # --- NUEVO: 4. EL GATILLO DE LA IA EN SEGUNDO PLANO ---
-    # Esto ocurre sin bloquear la respuesta del servidor al ESP32
+    # 4. EL GATILLO DE LA IA EN SEGUNDO PLANO
     background_tasks.add_task(generar_prediccion_riego, current_device.id_maceta, db)
 
     return {
@@ -231,6 +221,9 @@ def receive_lecturas(
         "anomalia_lluvia": evento_lluvia_detectado
     }
 
+# ==========================================
+# ENDPOINT: Obtención de Configuración (Edge)
+# ==========================================
 @router.get("/config", response_model=DeviceConfigResponse)
 def obtener_configuracion_edge(
     current_device: Maceta = Depends(get_current_device),
@@ -238,7 +231,7 @@ def obtener_configuracion_edge(
 ):
     """
     Entrega los umbrales operativos y la dosis de riego al ESP32.
-    Prioriza configuraciones manuales del usuario, cayendo por defecto a la biología de la planta.
+    Calcula además la tasa de absorción histórica para que el dispositivo opere offline.
     """
     # 1. Obtener datos biológicos base de la planta
     planta = db.query(TipoPlanta).filter(TipoPlanta.id_tipo_planta == current_device.id_tipo_planta).first()
@@ -251,16 +244,15 @@ def obtener_configuracion_edge(
         ConfiguracionMaceta.activa == True
     ).first()
 
-    # Combinamos lógicamente (La configuración del usuario sobreescribe la biología por defecto)
     hum_min = float(config_activa.humedad_suelo_min) if config_activa else float(planta.humedad_suelo_min)
     hum_max = float(config_activa.humedad_suelo_max) if config_activa else float(planta.humedad_suelo_max)
     dias_riego = config_activa.tiempo_min_entre_riegos_dias if config_activa else planta.tiempo_min_entre_riegos_dias
     modo = config_activa.modo_operacion if config_activa else "edge_auto"
 
-    # 3. Calcular horas inactivo (Crucial para el Riego por Tiempo de Espera)
+    # 3. Calcular horas inactivo
     ultimo_riego = db.query(ControlRiego).filter(
         ControlRiego.id_maceta == current_device.id_maceta,
-        ControlRiego.resultado_riego == "exitoso" # Solo contamos riegos que sí se completaron
+        ControlRiego.resultado_riego == "exitoso" 
     ).order_by(ControlRiego.fecha_inicio_riego.desc()).first()
     
     horas_inactivo = 0
@@ -269,8 +261,7 @@ def obtener_configuracion_edge(
         horas_inactivo = int(diferencia.total_seconds() / 3600)
 
     # 4. Inyección de Machine Learning (Dosis Dinámica)
-    # Buscamos la última predicción generada en background para esta maceta
-    dosis_calculada = 200.0 # Base segura por defecto (ml)
+    dosis_calculada = 200.0 
     
     prediccion_dosis = db.query(PrediccionesML).filter(
         PrediccionesML.id_maceta == current_device.id_maceta,
@@ -280,6 +271,17 @@ def obtener_configuracion_edge(
     if prediccion_dosis and prediccion_dosis.confianza_modelo > 80.0:
         dosis_calculada = float(prediccion_dosis.valor_predicho)
 
+    # --- NUEVA LÓGICA: CALCULAR TASA DE ABSORCIÓN HISTÓRICA PARA EL ESP32 ---
+    ultimos_riegos_tasa = db.query(ControlRiego).filter(
+        ControlRiego.id_maceta == current_device.id_maceta,
+        ControlRiego.incremento_humedad > 0
+    ).order_by(ControlRiego.fecha_fin_riego.desc()).limit(5).all()
+
+    tasa_esp32 = 5.0  # Valor por defecto si no hay historial aún (Cold Start)
+    if ultimos_riegos_tasa:
+        tasas = [float(r.cantidad_agua_ml) / float(r.incremento_humedad) for r in ultimos_riegos_tasa]
+        tasa_esp32 = sum(tasas) / len(tasas)
+
     return {
         "id_configuracion": config_activa.id_configuracion if config_activa else 0,
         "modo_operacion": modo,
@@ -287,8 +289,9 @@ def obtener_configuracion_edge(
         "humedad_suelo_max": hum_max,
         "tiempo_min_entre_riegos_dias": dias_riego,
         "dosis_ml_calculada": dosis_calculada,
-        "flujo_bomba_ml_por_segundo": 15.0, # Ajusta esto midiendo cuánto escupe tu bomba real en 1 seg
-        "horas_desde_ultimo_riego": horas_inactivo
+        "flujo_bomba_ml_por_segundo": 15.0, 
+        "horas_desde_ultimo_riego": horas_inactivo,
+        "tasa_absorcion_ml_por_porcentaje": round(tasa_esp32, 2)  # <-- Enviado al hardware
     }
 
 @router.post("/riego")
@@ -303,12 +306,10 @@ def reportar_riego_ejecutado(
     # 1. Calculamos metadatos en el servidor
     incremento = reporte.humedad_despues - reporte.humedad_antes
     
-    # Asumimos que la bomba tiene un flujo constante (puedes mover esto a una variable ENV o de catálogo)
     flujo_por_segundo = 15.0 
     cantidad_agua_usada = reporte.duracion_bomba_segundos * flujo_por_segundo
 
-    # Obtenemos el objetivo dinámico del momento para saber si nos pasamos o faltó
-    config = obtener_configuracion_edge(current_device, db) # Reutilizamos la lógica
+    config = obtener_configuracion_edge(current_device, db) 
     
     # 2. Guardamos la transacción en la BD
     nuevo_riego = ControlRiego(
@@ -323,7 +324,7 @@ def reportar_riego_ejecutado(
         temperatura_en_momento=reporte.temperatura_en_momento,
         luz_en_momento=reporte.luz_en_momento,
         id_tipo_activacion=reporte.id_tipo_activacion,
-        id_estado_registro=1, # 1 = exitoso
+        id_estado_registro=1, 
         resultado_riego="exitoso"
     )
 
