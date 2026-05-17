@@ -289,7 +289,7 @@ def obtener_configuracion_edge(
         "humedad_suelo_max": hum_max,
         "tiempo_min_entre_riegos_dias": dias_riego,
         "dosis_ml_calculada": dosis_calculada,
-        "flujo_bomba_ml_por_segundo": 15.0, 
+        "flujo_bomba_ml_por_segundo": 27.77, 
         "horas_desde_ultimo_riego": horas_inactivo,
         "tasa_absorcion_ml_por_porcentaje": round(tasa_esp32, 2)  # <-- Enviado al hardware
     }
