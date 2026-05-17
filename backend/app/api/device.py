@@ -157,7 +157,7 @@ def receive_lecturas(
                     humedad_despues=float(lectura.humedad_suelo),
                     incremento_humedad=delta_final,
                     humedad_objetivo_en_momento=0, 
-                    amount_agua_ml=0, 
+                    cantidad_agua_ml=0, 
                     duracion_bomba=0,
                     temperatura_en_momento=lectura.temperatura,
                     luz_en_momento=lectura.nivel_luz,

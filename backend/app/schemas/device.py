@@ -21,7 +21,7 @@ class LecturaResponse(LecturaCreate):
 class RiegoReportCreate(BaseModel):
     humedad_antes: float
     humedad_despues: float
-    duracion_bomba_segundos: int
+    duracion_bomba_segundos: float
     id_tipo_activacion: int # 1=Manual, 2=Edge (sensor crítico), 3=Timeout, 4=Lluvia
     temperatura_en_momento: float
     luz_en_momento: int
