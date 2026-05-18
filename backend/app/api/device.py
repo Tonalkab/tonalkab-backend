@@ -171,7 +171,7 @@ def receive_lecturas(
     # ==========================================
     # 3. SISTEMA REACTIVO DE ALERTAS 
     # ==========================================
-    config_maceta = obtener_configuracion_edge(current_device, db)
+    config_maceta = obtener_configuracion_edge_dict(current_device, db)
 
     def disparar_alerta(id_tipo, prioridad, mensaje_alerta):
         alerta_existente = db.query(Alerta).filter(
@@ -222,6 +222,30 @@ def receive_lecturas(
     }
 
 # ==========================================
+# FUNCION AUXILIAR (Extrae lógica de config para reutilizar)
+# ==========================================
+def obtener_configuracion_edge_dict(current_device: Maceta, db: Session):
+    planta = db.query(TipoPlanta).filter(TipoPlanta.id_tipo_planta == current_device.id_tipo_planta).first()
+    config_activa = db.query(ConfiguracionMaceta).filter(
+        ConfiguracionMaceta.id_maceta == current_device.id_maceta,
+        ConfiguracionMaceta.activa == True
+    ).first()
+
+    hum_min = float(config_activa.humedad_suelo_min) if config_activa else (float(planta.humedad_suelo_min) if planta else 0)
+    hum_max = float(config_activa.humedad_suelo_max) if config_activa else (float(planta.humedad_suelo_max) if planta else 0)
+    dias_riego = config_activa.tiempo_min_entre_riegos_dias if config_activa else (planta.tiempo_min_entre_riegos_dias if planta else 1)
+    modo = config_activa.modo_operacion if config_activa else "edge_auto"
+    dosis = float(config_activa.dosis_ml_calculada) if config_activa and config_activa.dosis_ml_calculada else 0.0
+
+    return {
+        "humedad_suelo_min": hum_min,
+        "humedad_suelo_max": hum_max,
+        "tiempo_min_entre_riegos_dias": dias_riego,
+        "modo_operacion": modo,
+        "dosis_ml_calculada": dosis
+    }
+
+# ==========================================
 # ENDPOINT: Obtención de Configuración (Edge)
 # ==========================================
 @router.get("/config", response_model=DeviceConfigResponse)
@@ -233,21 +257,13 @@ def obtener_configuracion_edge(
     Entrega los umbrales operativos y la dosis de riego al ESP32.
     Calcula además la tasa de absorción histórica para que el dispositivo opere offline.
     """
-    # 1. Obtener datos biológicos base de la planta
-    planta = db.query(TipoPlanta).filter(TipoPlanta.id_tipo_planta == current_device.id_tipo_planta).first()
-    if not planta:
-        raise HTTPException(status_code=404, detail="Tipo de planta no asociado a la maceta.")
-
-    # 2. Buscar si hay una configuración personalizada activa por el usuario
+    config_basica = obtener_configuracion_edge_dict(current_device, db)
+    
+    # Obtener ID de configuración activa
     config_activa = db.query(ConfiguracionMaceta).filter(
         ConfiguracionMaceta.id_maceta == current_device.id_maceta,
         ConfiguracionMaceta.activa == True
     ).first()
-
-    hum_min = float(config_activa.humedad_suelo_min) if config_activa else float(planta.humedad_suelo_min)
-    hum_max = float(config_activa.humedad_suelo_max) if config_activa else float(planta.humedad_suelo_max)
-    dias_riego = config_activa.tiempo_min_entre_riegos_dias if config_activa else planta.tiempo_min_entre_riegos_dias
-    modo = config_activa.modo_operacion if config_activa else "edge_auto"
 
     # 3. Calcular horas inactivo
     ultimo_riego = db.query(ControlRiego).filter(
@@ -261,15 +277,16 @@ def obtener_configuracion_edge(
         horas_inactivo = int(diferencia.total_seconds() / 3600)
 
     # 4. Inyección de Machine Learning (Dosis Dinámica)
-    dosis_calculada = 200.0 
+    dosis_calculada = config_basica["dosis_ml_calculada"]
     
-    prediccion_dosis = db.query(PrediccionesML).filter(
-        PrediccionesML.id_maceta == current_device.id_maceta,
-        PrediccionesML.tipo_prediccion == "dosis_riego"
-    ).order_by(PrediccionesML.fecha_generacion.desc()).first()
-    
-    if prediccion_dosis and prediccion_dosis.confianza_modelo > 80.0:
-        dosis_calculada = float(prediccion_dosis.valor_predicho)
+    if dosis_calculada == 0: # Si no hay orden manual, checamos ML
+        prediccion_dosis = db.query(PrediccionesML).filter(
+            PrediccionesML.id_maceta == current_device.id_maceta,
+            PrediccionesML.tipo_prediccion == "dosis_riego"
+        ).order_by(PrediccionesML.fecha_generacion.desc()).first()
+        
+        if prediccion_dosis and prediccion_dosis.confianza_modelo > 80.0:
+            dosis_calculada = float(prediccion_dosis.valor_predicho)
 
     # --- NUEVA LÓGICA: CALCULAR TASA DE ABSORCIÓN HISTÓRICA PARA EL ESP32 ---
     ultimos_riegos_tasa = db.query(ControlRiego).filter(
@@ -284,16 +301,19 @@ def obtener_configuracion_edge(
 
     return {
         "id_configuracion": config_activa.id_configuracion if config_activa else 0,
-        "modo_operacion": modo,
-        "humedad_suelo_min": hum_min,
-        "humedad_suelo_max": hum_max,
-        "tiempo_min_entre_riegos_dias": dias_riego,
+        "modo_operacion": config_basica["modo_operacion"],
+        "humedad_suelo_min": config_basica["humedad_suelo_min"],
+        "humedad_suelo_max": config_basica["humedad_suelo_max"],
+        "tiempo_min_entre_riegos_dias": config_basica["tiempo_min_entre_riegos_dias"],
         "dosis_ml_calculada": dosis_calculada,
         "flujo_bomba_ml_por_segundo": 27.77, 
         "horas_desde_ultimo_riego": horas_inactivo,
-        "tasa_absorcion_ml_por_porcentaje": round(tasa_esp32, 2)  # <-- Enviado al hardware
+        "tasa_absorcion_ml_por_porcentaje": round(tasa_esp32, 2)
     }
 
+# ==========================================
+# ENDPOINT: Reporte de Riego (Gatillo de Reset)
+# ==========================================
 @router.post("/riego")
 def reportar_riego_ejecutado(
     reporte: RiegoReportCreate,
@@ -305,12 +325,11 @@ def reportar_riego_ejecutado(
     """
     # 1. Calculamos metadatos en el servidor
     incremento = reporte.humedad_despues - reporte.humedad_antes
-    
     flujo_por_segundo = 15.0 
     cantidad_agua_usada = reporte.duracion_bomba_segundos * flujo_por_segundo
-
-    config = obtener_configuracion_edge(current_device, db) 
     
+    config_dict = obtener_configuracion_edge_dict(current_device, db)
+
     # 2. Guardamos la transacción en la BD
     nuevo_riego = ControlRiego(
         id_maceta=current_device.id_maceta,
@@ -318,7 +337,7 @@ def reportar_riego_ejecutado(
         humedad_antes=reporte.humedad_antes,
         humedad_despues=reporte.humedad_despues,
         incremento_humedad=incremento,
-        humedad_objetivo_en_momento=config["humedad_suelo_max"], 
+        humedad_objetivo_en_momento=config_dict["humedad_suelo_max"], 
         cantidad_agua_ml=cantidad_agua_usada,
         duracion_bomba=reporte.duracion_bomba_segundos,
         temperatura_en_momento=reporte.temperatura_en_momento,
@@ -327,8 +346,20 @@ def reportar_riego_ejecutado(
         id_estado_registro=1, 
         resultado_riego="exitoso"
     )
-
     db.add(nuevo_riego)
+
+    # -------------------------------------------------------------------
+    # 3. ¡EL PARCHE CRÍTICO! Borrar la orden para evitar bucle infinito
+    # -------------------------------------------------------------------
+    config_obj = db.query(ConfiguracionMaceta).filter(
+        ConfiguracionMaceta.id_maceta == current_device.id_maceta,
+        ConfiguracionMaceta.activa == True
+    ).first()
+
+    if config_obj and config_obj.dosis_ml_calculada > 0:
+        config_obj.dosis_ml_calculada = 0
+        config_obj.modo_operacion = "edge_auto"
+    
     db.commit()
     db.refresh(nuevo_riego)
 
