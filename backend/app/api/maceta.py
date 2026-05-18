@@ -40,7 +40,7 @@ def verificar_propiedad_maceta(id_maceta: int, id_usuario: int, db: Session):
 # ==========================================
 # ENDPOINT: Crear Maceta (Unificado y Seguro)
 # ==========================================
-@router.post("/", response_model=MacetaCreateResponse) # <-- SE USA EL NUEVO ESQUEMA
+@router.post("/", response_model=MacetaCreateResponse)
 def registrar_maceta(
     maceta_data: MacetaCreate,
     db: Session = Depends(get_db),
@@ -259,3 +259,48 @@ def cambiar_skin_maceta(
     db.commit()
 
     return {"message": f"Skin actualizada exitosamente para la maceta {maceta.nombre_maceta}"}
+
+# ==========================================
+# ENDPOINT: Regar Ahora (Forzar Riego)
+# ==========================================
+@router.post("/{id_maceta}/regar-ahora")
+def forzar_riego_manual(
+    id_maceta: int, 
+    db: Session = Depends(get_db), 
+    current_user = Depends(get_current_user)
+):
+    """Calcula cuánta agua necesita la planta y deja la orden para el ESP32."""
+    maceta = verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
+    
+    config = db.query(ConfiguracionMaceta).filter(
+        ConfiguracionMaceta.id_maceta == id_maceta,
+        ConfiguracionMaceta.activa == True
+    ).first()
+    
+    if not config:
+        raise HTTPException(status_code=400, detail="La maceta no tiene configuración activa.")
+
+    ultima_lectura = db.query(LecturaSensores).filter(
+        LecturaSensores.id_maceta == id_maceta
+    ).order_by(LecturaSensores.fecha_hora.desc()).first()
+
+    humedad_actual = ultima_lectura.humedad_suelo if ultima_lectura else 0.0
+    humedad_objetivo = config.humedad_suelo_max
+    
+    if humedad_actual >= humedad_objetivo:
+        return {"message": "La planta ya tiene la humedad ideal, no es necesario regar."}
+
+    # Calculamos la dosis usando la tasa de absorción (usamos 5.0 como respaldo por si el campo no existe)
+    humedad_faltante = float(humedad_objetivo) - float(humedad_actual)
+    tasa_absorcion = getattr(config, 'tasa_absorcion_ml_por_porcentaje', 5.0) 
+    dosis_ml = humedad_faltante * float(tasa_absorcion)
+
+    # Guardamos la orden en la base de datos
+    config.dosis_ml_calculada = dosis_ml
+    db.commit()
+
+    return {
+        "message": "Orden de riego programada con éxito.", 
+        "dosis_ml": dosis_ml,
+        "nota": "El riego comenzará en cuanto la maceta se despierte (máximo en 3.5 minutos)."
+    }
