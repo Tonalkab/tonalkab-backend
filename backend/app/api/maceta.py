@@ -325,3 +325,36 @@ def forzar_riego_manual(
         "dosis_ml": dosis_ml,
         "nota": "El riego comenzará en cuanto la maceta se despierte (máximo en 3.5 minutos)."
     }
+
+# ==============================================================
+# ENDPOINT: FORZAR RIEGO MANUAL DESDE LA APP (CÁLCULO EN EDGE)
+# ==============================================================
+@router.post("/{id_maceta}/forzar-riego-edge")
+def forzar_riego_edge(id_maceta: int, db: Session = Depends(get_db)):
+    """
+    Endpoint para que la App Móvil solicite un riego inmediato.
+    Envía una señal bandera de '0.0' ml con confianza '100.0'.
+    Al detectar esto, el ESP32 sabrá que debe usar sus sensores en vivo
+    y su tasa de absorción guardada para calcular y ejecutar el riego de forma local.
+    """
+    # 1. Verificar que la maceta exista en el sistema
+    maceta = db.query(Maceta).filter(Maceta.id_maceta == id_maceta).first()
+    if not maceta:
+        raise HTTPException(status_code=404, detail="Maceta no encontrada")
+
+    # 2. Inyectar la orden en la tabla de predicciones.
+    # Usamos '0.0' como una "bandera de activación manual" que el ESP32 interpretará.
+    nueva_orden = PrediccionesML(
+        id_maceta=id_maceta,
+        tipo_prediccion="dosis_riego",
+        valor_predicho="0.0",  # Señal clave para el hardware
+        confianza_modelo=100.0, # Indica prioridad humana máxima sobre el ciclo automático
+        datos_entrada='{"origen": "boton_app_movil", "metodo": "calculo_en_edge"}'
+    )
+    db.add(nueva_orden)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Señal de riego manual enviada con éxito. La maceta calculará la dosis exacta en su próximo ciclo."
+    }
