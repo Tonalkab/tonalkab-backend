@@ -13,6 +13,7 @@ from app.models.lectura import LecturaSensores
 from app.models.configuracion_maceta import ConfiguracionMaceta
 from app.models.tipo_planta import TipoPlanta
 from app.models.skin import UsuarioSkin, MacetaSkin
+from app.models.predicciones_ml import PrediccionesML  # <-- 1. CORREGIDO: Importación añadida
 
 # Esquemas (Pydantic)
 from app.schemas.maceta import MacetaCreate, MacetaResponse, MacetaCreateResponse, MacetaUpdatePlanta, ConfiguracionCreate
@@ -260,95 +261,34 @@ def cambiar_skin_maceta(
 
     return {"message": f"Skin actualizada exitosamente para la maceta {maceta.nombre_maceta}"}
 
-# ==========================================
-# ENDPOINT: Regar Ahora (Forzar Riego) - VERSIÓN MEJORADA
-# ==========================================
-@router.post("/{id_maceta}/regar-ahora")
-def forzar_riego_manual(
-    id_maceta: int, 
-    db: Session = Depends(get_db), 
-    current_user = Depends(get_current_user)
-):
-    """Calcula cuánta agua necesita la planta. Si no hay config, la crea automáticamente."""
-    maceta = verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
-    
-    # 1. Buscamos si la maceta ya tiene una configuración activa
-    config = db.query(ConfiguracionMaceta).filter(
-        ConfiguracionMaceta.id_maceta == id_maceta,
-        ConfiguracionMaceta.activa == True
-    ).first()
-    
-    # 2. Si no existe, creamos una al vuelo usando los datos de la especie de la planta
-    if not config:
-        planta = db.query(TipoPlanta).filter(TipoPlanta.id_tipo_planta == maceta.id_tipo_planta).first()
-        if not planta:
-            raise HTTPException(status_code=400, detail="La maceta no tiene una planta válida asignada.")
-        
-        config = ConfiguracionMaceta(
-            id_maceta=id_maceta,
-            humedad_suelo_min=planta.humedad_suelo_min,
-            humedad_suelo_max=planta.humedad_suelo_max,
-            tiempo_min_entre_riegos_dias=planta.tiempo_min_entre_riegos_dias,
-            modo_operacion="edge_auto",
-            origen_configuracion="sistema",
-            activa=True,
-            dosis_ml_calculada=0
-        )
-        db.add(config)
-        db.commit()
-        db.refresh(config)
-
-    # 3. Obtenemos la última lectura de sensores
-    ultima_lectura = db.query(LecturaSensores).filter(
-        LecturaSensores.id_maceta == id_maceta
-    ).order_by(LecturaSensores.fecha_hora.desc()).first()
-
-    humedad_actual = ultima_lectura.humedad_suelo if ultima_lectura else 0.0
-    humedad_objetivo = config.humedad_suelo_max
-    
-    # Si la tierra ya está por encima del máximo, no regamos
-    if humedad_actual >= humedad_objetivo:
-        return {"message": "La planta ya tiene la humedad ideal, no es necesario regar."}
-
-    # 4. Calculamos la dosis usando la tasa de absorción
-    humedad_faltante = float(humedad_objetivo) - float(humedad_actual)
-    tasa_absorcion = getattr(config, 'tasa_absorcion_ml_por_porcentaje', 5.0) 
-    dosis_ml = humedad_faltante * float(tasa_absorcion)
-
-    # 5. Guardamos la orden en la base de datos
-    config.dosis_ml_calculada = dosis_ml
-    config.modo_operacion = "manual"
-    db.commit()
-
-    return {
-        "message": "Orden de riego programada con éxito.", 
-        "dosis_ml": dosis_ml,
-        "nota": "El riego comenzará en cuanto la maceta se despierte (máximo en 3.5 minutos)."
-    }
 
 # ==============================================================
-# ENDPOINT: FORZAR RIEGO MANUAL DESDE LA APP (CÁLCULO EN EDGE)
-# ==============================================================
-# ==============================================================
-# ENDPOINT: FORZAR RIEGO MANUAL DESDE LA APP (CÁLCULO EN EDGE)
+# 🌟 ENDPOINT PERFECCIONADO: FORZAR RIEGO EN EL EDGE (CON MÁXIMA SEGURIDAD)
 # ==============================================================
 @router.post("/{id_maceta}/forzar-riego-edge")
-def forzar_riego_edge(id_maceta: int, db: Session = Depends(get_db)):
+def forzar_riego_edge(
+    id_maceta: int, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user) # <-- 2. CORREGIDO: Autenticación añadida
+):
     """
     Endpoint para que la App Móvil solicite un riego inmediato delegando en el Edge.
     Envía una señal bandera de '-1.0' ml. Al detectar esto, el ESP32 sabrá 
     que debe calcular la dosis localmente usando sus sensores en vivo.
     """
-    maceta = db.query(Maceta).filter(Maceta.id_maceta == id_maceta).first()
-    if not maceta:
-        raise HTTPException(status_code=404, detail="Maceta no encontrada")
+    # 3. CORREGIDO: Capa de Seguridad que valida la propiedad antes de procesar
+    verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
 
     # Inyectamos el -1.0 en la tabla de predicciones como señal de disparo humana
+    # 4. CORREGIDO: Mapeo de campos requeridos NOT NULL de la tabla predicciones_ml
     nueva_orden = PrediccionesML(
         id_maceta=id_maceta,
         tipo_prediccion="dosis_riego",
-        valor_predicho="-1.0",  # <--- Bandera inequívoca para el hardware
-        confianza_modelo=100.0, 
+        valor_predicho=-1.0,         # Bandera numérica de activación manual
+        confianza_modelo=100.0,       # Prioridad humana máxima sobre la automatización
+        unidad_medida="ml",          # Campo NOT NULL
+        periodo_pronostico=0,        # Campo NOT NULL
+        version_modelo="v2_edge",    # Campo NOT NULL
         datos_entrada='{"origen": "boton_app_movil", "metodo": "calculo_en_edge"}'
     )
     db.add(nueva_orden)
@@ -356,5 +296,6 @@ def forzar_riego_edge(id_maceta: int, db: Session = Depends(get_db)):
 
     return {
         "status": "success",
-        "message": "Señal enviada con éxito. La maceta calculará la dosis de forma autónoma en su próximo ciclo."
+        "message": "Señal enviada con éxito.",
+        "nota": "El riego comenzará en cuanto la maceta se despierte (máximo en 3.5 minutos)."
     }
