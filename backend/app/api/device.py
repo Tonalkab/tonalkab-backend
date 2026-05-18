@@ -349,17 +349,30 @@ def reportar_riego_ejecutado(
     db.add(nuevo_riego)
 
     # -------------------------------------------------------------------
-    # 3. ¡EL PARCHE CRÍTICO! Borrar la orden para evitar bucle infinito
+    # 3. ¡EL PARCHE CRÍTICO MEJORADO! Borrar la orden para evitar bucle infinito
     # -------------------------------------------------------------------
     config_obj = db.query(ConfiguracionMaceta).filter(
         ConfiguracionMaceta.id_maceta == current_device.id_maceta,
         ConfiguracionMaceta.activa == True
     ).first()
 
+    # 3.1 Limpiar orden si venía directamente de ConfiguracionMaceta
     if config_obj and config_obj.dosis_ml_calculada > 0:
         config_obj.dosis_ml_calculada = 0
         config_obj.modo_operacion = "edge_auto"
     
+    # 3.2 NUEVO: Limpiar la orden del Edge (-1.0) o de la IA en PrediccionesML
+    ultima_prediccion = db.query(PrediccionesML).filter(
+        PrediccionesML.id_maceta == current_device.id_maceta,
+        PrediccionesML.tipo_prediccion == "dosis_riego"
+    ).order_by(PrediccionesML.fecha_generacion.desc()).first()
+
+    if ultima_prediccion and (ultima_prediccion.valor_predicho == -1.0 or ultima_prediccion.valor_predicho > 0):
+        # Desactivamos esta predicción bajando su confianza y valor a 0 
+        # para que el endpoint /config la ignore en la siguiente consulta.
+        ultima_prediccion.confianza_modelo = 0.0
+        ultima_prediccion.valor_predicho = 0.0
+
     db.commit()
     db.refresh(nuevo_riego)
 
