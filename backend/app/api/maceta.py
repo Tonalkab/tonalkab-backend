@@ -14,7 +14,7 @@ from app.models.configuracion_maceta import ConfiguracionMaceta
 from app.models.tipo_planta import TipoPlanta
 from app.models.skin import UsuarioSkin, MacetaSkin
 
-# Esquemas (Pydantic) - IMPORTACIÓN ACTUALIZADA
+# Esquemas (Pydantic)
 from app.schemas.maceta import MacetaCreate, MacetaResponse, MacetaCreateResponse, MacetaUpdatePlanta, ConfiguracionCreate
 from app.schemas.device import LecturaResponse 
 
@@ -261,7 +261,7 @@ def cambiar_skin_maceta(
     return {"message": f"Skin actualizada exitosamente para la maceta {maceta.nombre_maceta}"}
 
 # ==========================================
-# ENDPOINT: Regar Ahora (Forzar Riego)
+# ENDPOINT: Regar Ahora (Forzar Riego) - VERSIÓN MEJORADA
 # ==========================================
 @router.post("/{id_maceta}/regar-ahora")
 def forzar_riego_manual(
@@ -269,17 +269,36 @@ def forzar_riego_manual(
     db: Session = Depends(get_db), 
     current_user = Depends(get_current_user)
 ):
-    """Calcula cuánta agua necesita la planta y deja la orden para el ESP32."""
+    """Calcula cuánta agua necesita la planta. Si no hay config, la crea automáticamente."""
     maceta = verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
     
+    # 1. Buscamos si la maceta ya tiene una configuración activa
     config = db.query(ConfiguracionMaceta).filter(
         ConfiguracionMaceta.id_maceta == id_maceta,
         ConfiguracionMaceta.activa == True
     ).first()
     
+    # 2. Si no existe, creamos una al vuelo usando los datos de la especie de la planta
     if not config:
-        raise HTTPException(status_code=400, detail="La maceta no tiene configuración activa.")
+        planta = db.query(TipoPlanta).filter(TipoPlanta.id_tipo_planta == maceta.id_tipo_planta).first()
+        if not planta:
+            raise HTTPException(status_code=400, detail="La maceta no tiene una planta válida asignada.")
+        
+        config = ConfiguracionMaceta(
+            id_maceta=id_maceta,
+            humedad_suelo_min=planta.humedad_suelo_min,
+            humedad_suelo_max=planta.humedad_suelo_max,
+            tiempo_min_entre_riegos_dias=planta.tiempo_min_entre_riegos_dias,
+            modo_operacion="edge_auto",
+            origen_configuracion="sistema",
+            activa=True,
+            dosis_ml_calculada=0
+        )
+        db.add(config)
+        db.commit()
+        db.refresh(config)
 
+    # 3. Obtenemos la última lectura de sensores
     ultima_lectura = db.query(LecturaSensores).filter(
         LecturaSensores.id_maceta == id_maceta
     ).order_by(LecturaSensores.fecha_hora.desc()).first()
@@ -287,16 +306,18 @@ def forzar_riego_manual(
     humedad_actual = ultima_lectura.humedad_suelo if ultima_lectura else 0.0
     humedad_objetivo = config.humedad_suelo_max
     
+    # Si la tierra ya está por encima del máximo, no regamos
     if humedad_actual >= humedad_objetivo:
         return {"message": "La planta ya tiene la humedad ideal, no es necesario regar."}
 
-    # Calculamos la dosis usando la tasa de absorción (usamos 5.0 como respaldo por si el campo no existe)
+    # 4. Calculamos la dosis usando la tasa de absorción
     humedad_faltante = float(humedad_objetivo) - float(humedad_actual)
     tasa_absorcion = getattr(config, 'tasa_absorcion_ml_por_porcentaje', 5.0) 
     dosis_ml = humedad_faltante * float(tasa_absorcion)
 
-    # Guardamos la orden en la base de datos
+    # 5. Guardamos la orden en la base de datos
     config.dosis_ml_calculada = dosis_ml
+    config.modo_operacion = "manual"
     db.commit()
 
     return {
