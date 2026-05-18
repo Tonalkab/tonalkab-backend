@@ -263,33 +263,32 @@ def cambiar_skin_maceta(
 
 
 # ==============================================================
-# 🌟 ENDPOINT PERFECCIONADO: FORZAR RIEGO EN EL EDGE (CON MÁXIMA SEGURIDAD)
+# 🌟 ENDPOINT PERFECCIONADO: FORZAR RIEGO EN EL EDGE (CORREGIDO)
 # ==============================================================
 @router.post("/{id_maceta}/forzar-riego-edge")
 def forzar_riego_edge(
     id_maceta: int, 
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user) # <-- 2. CORREGIDO: Autenticación añadida
+    current_user = Depends(get_current_user)
 ):
     """
     Endpoint para que la App Móvil solicite un riego inmediato delegando en el Edge.
     Envía una señal bandera de '-1.0' ml. Al detectar esto, el ESP32 sabrá 
     que debe calcular la dosis localmente usando sus sensores en vivo.
     """
-    # 3. CORREGIDO: Capa de Seguridad que valida la propiedad antes de procesar
+    # Capa de Seguridad que valida la propiedad antes de procesar
     verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
 
-    # Inyectamos el -1.0 en la tabla de predicciones como señal de disparo humana
-    # 4. CORREGIDO: Mapeo de campos requeridos NOT NULL de la tabla predicciones_ml
+    # Inyectamos el -1.0 utilizando únicamente las columnas reales de tu modelo PrediccionesML
     nueva_orden = PrediccionesML(
         id_maceta=id_maceta,
         tipo_prediccion="dosis_riego",
         valor_predicho=-1.0,         # Bandera numérica de activación manual
         confianza_modelo=100.0,       # Prioridad humana máxima sobre la automatización
-        unidad_medida="ml",          # Campo NOT NULL
-        periodo_pronostico=0,        # Campo NOT NULL
-        version_modelo="v2_edge",    # Campo NOT NULL
-        datos_entrada='{"origen": "boton_app_movil", "metodo": "calculo_en_edge"}'
+        unidad_medida="ml",          # Mapeado correcto NOT NULL
+        periodo_pronostico=0,        # Mapeado correcto NOT NULL
+        version_modelo="v2_edge"     # Mapeado correcto NOT NULL
+        # 🧹 Removido 'datos_entrada' para evitar el TypeError
     )
     db.add(nueva_orden)
     db.commit()
