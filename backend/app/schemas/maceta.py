@@ -9,7 +9,6 @@ class MacetaCreate(BaseModel):
     nombre_maceta: str
     id_tipo_planta: int
 
-
 class MacetaResponse(BaseModel):
     id_maceta: int
     nombre_maceta: str
@@ -30,9 +29,12 @@ class MacetaCreateResponse(MacetaResponse):
 class MacetaUpdatePlanta(BaseModel):
     id_tipo_planta: int
 
-
 class ConfiguracionCreate(BaseModel):
     humedad_suelo_min: float
     humedad_suelo_max: float
     tiempo_min_entre_riegos_dias: int
     modo_operacion: str = "edge_auto"
+
+# --- ESQUEMA PARA FORZAR RIEGO (NUEVO) ---
+class ForzarRiegoEdgeRequest(BaseModel):
+    segundos: Optional[int] = None

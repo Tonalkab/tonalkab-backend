@@ -16,7 +16,8 @@ from app.models.skin import UsuarioSkin, MacetaSkin
 from app.models.predicciones_ml import PrediccionesML  # <-- 1. CORREGIDO: Importación añadida
 
 # Esquemas (Pydantic)
-from app.schemas.maceta import MacetaCreate, MacetaResponse, MacetaCreateResponse, MacetaUpdatePlanta, ConfiguracionCreate
+# 🌟 Añadido ForzarRiegoEdgeRequest a las importaciones
+from app.schemas.maceta import MacetaCreate, MacetaResponse, MacetaCreateResponse, MacetaUpdatePlanta, ConfiguracionCreate, ForzarRiegoEdgeRequest
 from app.schemas.device import LecturaResponse 
 
 router = APIRouter(prefix="/macetas", tags=["Macetas"])
@@ -263,32 +264,52 @@ def cambiar_skin_maceta(
 
 
 # ==============================================================
-# 🌟 ENDPOINT PERFECCIONADO: FORZAR RIEGO EN EL EDGE (CORREGIDO)
+# 🌟 ENDPOINT PERFECCIONADO: FORZAR RIEGO EN EL EDGE (ACTUALIZADO)
 # ==============================================================
 @router.post("/{id_maceta}/forzar-riego-edge")
 def forzar_riego_edge(
     id_maceta: int, 
+    payload: ForzarRiegoEdgeRequest = None,  # Recibimos el payload opcional
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     """
     Endpoint para que la App Móvil solicite un riego inmediato delegando en el Edge.
-    Envía una señal bandera de '-1.0' ml. Al detectar esto, el ESP32 sabrá 
-    que debe calcular la dosis localmente usando sus sensores en vivo.
+    Si recibe 'segundos', multiplica por el flujo para guardar mililitros exactos.
+    Si no recibe 'segundos', guarda -1.0 para que el ESP32 calcule usando sus sensores.
     """
-    # Capa de Seguridad que valida la propiedad antes de procesar
+    # 1. Capa de Seguridad que valida la propiedad antes de procesar
     verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
 
-    # Inyectamos el -1.0 utilizando únicamente las columnas reales de tu modelo PrediccionesML
+    valor_predicho = -1.0
+    mensaje_nota = "El riego inteligente comenzará en cuanto la maceta se despierte (máximo en 3.5 minutos)."
+
+    # 2. Lógica matemática de conversión (Segundos a Mililitros)
+    if payload and payload.segundos:
+        # Obtenemos la configuración activa actual
+        config_activa = db.query(ConfiguracionMaceta).filter(
+            ConfiguracionMaceta.id_maceta == id_maceta,
+            ConfiguracionMaceta.activa == True
+        ).first()
+
+        # Usamos el flujo de la BD. Si por alguna razón es nulo/no existe, usamos tu default de 27.7
+        flujo = 27.7
+        if config_activa and getattr(config_activa, "flujo_bomba_ml_por_segundo", None):
+            flujo = config_activa.flujo_bomba_ml_por_segundo
+
+        # Calculamos los ml exactos para que la fórmula del ESP32 dé exactamente los N segundos
+        valor_predicho = float(payload.segundos * flujo)
+        mensaje_nota = f"Bomba programada para {payload.segundos} segundos. Se activará en el próximo ciclo."
+
+    # 3. Guardado en cola (Tabla de ML)
     nueva_orden = PrediccionesML(
         id_maceta=id_maceta,
         tipo_prediccion="dosis_riego",
-        valor_predicho=-1.0,         # Bandera numérica de activación manual
-        confianza_modelo=100.0,       # Prioridad humana máxima sobre la automatización
-        unidad_medida="ml",          # Mapeado correcto NOT NULL
-        periodo_pronostico=0,        # Mapeado correcto NOT NULL
-        version_modelo="v2_edge"     # Mapeado correcto NOT NULL
-        # 🧹 Removido 'datos_entrada' para evitar el TypeError
+        valor_predicho=valor_predicho,       # Calculado en ml o bandera manual -1.0
+        confianza_modelo=100.0,              # Prioridad humana máxima sobre la automatización
+        unidad_medida="ml",                  # Mapeado correcto NOT NULL
+        periodo_pronostico=0,                # Mapeado correcto NOT NULL
+        version_modelo="v2_edge"             # Mapeado correcto NOT NULL
     )
     db.add(nueva_orden)
     db.commit()
@@ -296,5 +317,5 @@ def forzar_riego_edge(
     return {
         "status": "success",
         "message": "Señal enviada con éxito.",
-        "nota": "El riego comenzará en cuanto la maceta se despierte (máximo en 3.5 minutos)."
+        "nota": mensaje_nota
     }
