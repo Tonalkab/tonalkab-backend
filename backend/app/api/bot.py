@@ -144,7 +144,7 @@ def chatear_con_bot(
                 messages.append({"role": role, "content": m.content})
 
             if request.imagen_base64:
-                modelo_groq = "llama-3.2-11b-vision-preview"
+                modelo_groq = "llama-3.3-70b-versatile"
                 base64_str = request.imagen_base64
                 if "base64," in base64_str:
                     base64_str = base64_str.split("base64,")[1]
