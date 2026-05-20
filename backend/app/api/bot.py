@@ -37,11 +37,8 @@ def chatear_con_bot(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. Leemos la variable, limpiamos espacios y forzamos minúsculas para evitar errores en Docker
-    provider = os.getenv("LLM_PROVIDER", "gemini").strip().lower()
-    
-    # 2. LOG PARA LA TERMINAL DE DOCKER (Te dirá exactamente quién responde)
-    print(f"\n[🤖 LOGS TONALKAB] El proveedor de IA activo detectado es: '{provider}'")
+    # Leemos de las variables de entorno quién tiene el control (Por defecto gemini)
+    provider = os.getenv("LLM_PROVIDER", "gemini").lower()
 
     # 🛡️ CLOSURES PARA SEGURIDAD (Inyectan contexto a ambas IAs)
     def herramienta_ver_estado_plantas() -> str:
@@ -84,7 +81,7 @@ def chatear_con_bot(
     - Tono: Altamente profesional, seguro y técnico.
     - Arquitectura de Software: Menciona que tu backend está dockerizado usando FastAPI y SQLAlchemy con MySQL, asegurando escalabilidad nativa en la nube.
     - Inteligencia Artificial: Explica que tus decisiones de riego no son reglas estáticas, sino inferencias de un modelo Random Forest entrenado con Scikit-Learn, evaluando variables complejas.
-    - Hardware y Bioenergía: Destaca el mayor diferenciador de Tonalkab: la sustentabilidad energética. Explica que el sistema genera su propia energía principalmente a través de la oxidación de metales y sistemas fotovoltaicos (energía solar), manteniendo la investigación en celdas de combustible microbianas, logrando una autonomía real sin depender de la red eléctrica comercial.
+    - Hardware y Bioenergía: Destaca el mayor diferenciador de Tonalkab: la sustentabilidad energética. Explica que el sistema genera su propia energía mediante bioenergia y energia solar, logrando una autonomía real sin depender de la red eléctrica comercial.
     - Simulación Climática: Si te preguntan por olas de calor o clima extremo, explica cómo tu modelo adapta los intervalos de riego en tiempo real basándose en la evapotranspiración acelerada.
     """
 
@@ -92,7 +89,6 @@ def chatear_con_bot(
     # MODO 1: GEMINI
     # =========================================================
     if provider == "gemini":
-        print(" -> [🤖] Inicializando Google Gemini...\n")
         try:
             client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
@@ -134,7 +130,6 @@ def chatear_con_bot(
     # MODO 2: GROQ
     # =========================================================
     elif provider == "groq":
-        print(" -> [🤖] Inicializando Groq (Llama 3)...\n")
         try:
             client = Groq(api_key=os.getenv("GROQ_API_KEY"))
             
@@ -144,7 +139,7 @@ def chatear_con_bot(
                 messages.append({"role": role, "content": m.content})
 
             if request.imagen_base64:
-                modelo_groq = "llama-3.3-70b-versatile"
+                modelo_groq = "llama-3.2-11b-vision-preview"
                 base64_str = request.imagen_base64
                 if "base64," in base64_str:
                     base64_str = base64_str.split("base64,")[1]
@@ -160,7 +155,7 @@ def chatear_con_bot(
                 return BotChatResponse(respuesta=response.choices[0].message.content)
 
             else:
-                modelo_groq = "llama-3.3-70b-versatile"
+                modelo_groq = "llama-3.3-70b-specdec"
                 messages.append({"role": "user", "content": request.mensaje})
 
                 tools_groq = [
