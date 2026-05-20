@@ -134,7 +134,7 @@ def chatear_con_bot(
     # MODO 2: GROQ
     # =========================================================
     elif provider == "groq":
-        print(" -> [🤖] Inicializando Groq (Llama 3)....\n")
+        print(" -> [🤖] Inicializando Groq (Llama 3)...\n")
         try:
             client = Groq(api_key=os.getenv("GROQ_API_KEY"))
             
@@ -160,7 +160,7 @@ def chatear_con_bot(
                 return BotChatResponse(respuesta=response.choices[0].message.content)
 
             else:
-                modelo_groq = "llama-3.3-70b-specdec"
+                modelo_groq = "llama-3.3-70b-versatile"
                 messages.append({"role": "user", "content": request.mensaje})
 
                 tools_groq = [
