@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from datetime import datetime  # <--- IMPORTANTE: Para el último login
 
-from app.db import SessionLocal
+from app.db import get_db
 from app.models.user import User as Usuario
 from app.models.auth_provider import AuthProvider
 
@@ -18,14 +18,6 @@ router = APIRouter()
 
 # 🔐 Esquema de seguridad
 security = HTTPBearer()
-
-# 📦 DB Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 # 🔐 Dependency: Obtener usuario autenticado (Ya lo tienes bien)
 def get_current_user(

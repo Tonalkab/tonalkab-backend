@@ -67,9 +67,13 @@ def comprar_o_desbloquear_skin(
     if not skin:
         raise HTTPException(status_code=404, detail="La skin solicitada no existe")
         
+    usuario = db.query(User).filter(User.id_usuario == current_user.id_usuario).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
     # Verificar si ya la tiene
     ya_obtenida = db.query(UsuarioSkin).filter(
-        UsuarioSkin.id_usuario == current_user.id_usuario,
+        UsuarioSkin.id_usuario == usuario.id_usuario,
         UsuarioSkin.id_skin == id_skin
     ).first()
     
@@ -77,29 +81,29 @@ def comprar_o_desbloquear_skin(
         return {
             "message": "Ya tienes esta skin en tu colección",
             "id_skin": id_skin,
-            "saldo_monedas": current_user.monedas
+            "saldo_monedas": usuario.monedas
         }
         
     precio = skin.precio_monedas or 0
     if precio > 0:
-        if (current_user.monedas or 0) < precio:
+        if (usuario.monedas or 0) < precio:
             raise HTTPException(
                 status_code=400,
-                detail=f"Saldo insuficiente. Requieres {precio} monedas y tienes {current_user.monedas}."
+                detail=f"Saldo insuficiente. Requieres {precio} monedas y tienes {usuario.monedas}."
             )
-        current_user.monedas -= precio
+        usuario.monedas -= precio
         
     nueva_skin_usuario = UsuarioSkin(
-        id_usuario=current_user.id_usuario,
+        id_usuario=usuario.id_usuario,
         id_skin=id_skin,
         equipado=False
     )
     db.add(nueva_skin_usuario)
     db.commit()
-    db.refresh(current_user)
+    db.refresh(usuario)
     
     return {
         "message": f"¡Skin '{skin.nombre}' desbloqueada exitosamente!",
         "id_skin": id_skin,
-        "saldo_monedas": current_user.monedas
+        "saldo_monedas": usuario.monedas
     }
