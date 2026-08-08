@@ -2365,10 +2365,12 @@ MODIFY COLUMN descripcion TEXT NULL;
 ### 👑 C. Panel de Administración y Subida de Archivos (`backend/app/api/admin.py`)
 - **Dependencia de Seguridad (`backend/app/api/auth.py`):**
   - `get_current_admin_user`: Intercepta la petición y valida `current_user.es_admin == True`. Rechaza con `403 Forbidden` a usuarios convencionales.
-- **Endpoints Multipart / Form-Data (Sin comandos SQL manuales):**
+- **Endpoints Multipart / Form-Data y Billetera (Sin comandos SQL manuales):**
   - `POST /admin/skins`: Recibe nombre, descripción, precio en monedas, es_premium y el archivo de imagen binario (`UploadFile`). Guarda físicamente la imagen en `app/assets/skins/` y crea el registro en la tabla `Skin`.
   - `POST /admin/plantas`: Recibe el formulario botánico completo (nombre, rangos de humedad, temperatura, días de riego, dificultad) y fotografía opcional. Registra en `TipoPlanta`.
   - `GET /admin/stats`: Proporciona métricas en tiempo real (total de usuarios, macetas registradas, skins y catálogo botánico).
+  - `GET /admin/usuarios`: Búsqueda y listado de usuarios del sistema con su saldo de monedas y rol para administración.
+  - `POST /admin/usuarios/{id_usuario}/monedas`: Permite a un administrador transferir, recargar o ajustar monedas a cualquier usuario en tiempo real.
 
 ---
 
@@ -2384,5 +2386,6 @@ MODIFY COLUMN descripcion TEXT NULL;
   - Muestra el saldo de monedas del usuario.
   - Badge `"ADMIN"` y botón exclusivo de acceso directo a `"⚙️ Panel de Gestión"` para administradores.
 - **Panel de Administración Móvil (`tonalkab/src/screens/AdminPanelScreen.js`):**
-  - Interfaz con selector de fotos desde la galería del dispositivo (`expo-image-picker`), formularios con validaciones y panel de métricas globales.
+  - Interfaz con selector de fotos desde la galería del dispositivo (`expo-image-picker`), formularios de subida de skins y plantas, panel de métricas globales.
+  - **Pestaña 🪙 Monedas:** Buscador de usuarios por nombre o correo, visualización de saldo actual en tiempo real, chips de montos rápidos (+100, +500, +1,000, +5,000), selector manual y botón de transferencia directa a la billetera del usuario.
 

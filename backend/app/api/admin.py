@@ -180,3 +180,69 @@ def crear_planta_admin(
         "message": f"Planta '{nueva_planta.nombre_planta}' agregada exitosamente al catálogo.",
         "id_tipo_planta": nueva_planta.id_tipo_planta
     }
+
+
+# ==========================================
+# 👥 GESTIÓN DE USUARIOS Y BILLETERA DE MONEDAS
+# ==========================================
+from pydantic import BaseModel, Field
+
+class OtorgarMonedasRequest(BaseModel):
+    cantidad: int = Field(..., description="Cantidad de monedas a transferir")
+
+@router.get("/usuarios")
+def buscar_usuarios_admin(
+    query: Optional[str] = None,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user)
+):
+    """Permite al administrador buscar usuarios por nombre o correo electrónico."""
+    q = db.query(User).filter(User.deleted_at == None)
+    if query and query.strip():
+        search_term = f"%{query.strip()}%"
+        q = q.filter((User.email.ilike(search_term)) | (User.nombre.ilike(search_term)))
+    
+    usuarios = q.order_by(User.id_usuario.desc()).limit(30).all()
+    return [
+        {
+            "id_usuario": u.id_usuario,
+            "nombre": u.nombre,
+            "email": u.email,
+            "foto_perfil_url": u.foto_perfil_url,
+            "monedas": u.monedas or 0,
+            "es_admin": u.es_admin
+        }
+        for u in usuarios
+    ]
+
+
+@router.post("/usuarios/{id_usuario}/monedas")
+def otorgar_monedas_admin(
+    id_usuario: int,
+    data: OtorgarMonedasRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user)
+):
+    """Permite al administrador añadir o transferir monedas a la cuenta de cualquier usuario."""
+    usuario = db.query(User).filter(User.id_usuario == id_usuario).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if data.cantidad == 0:
+        raise HTTPException(status_code=400, detail="La cantidad debe ser diferente de 0")
+
+    saldo_anterior = usuario.monedas or 0
+    nuevo_saldo = max(0, saldo_anterior + data.cantidad)
+    usuario.monedas = nuevo_saldo
+
+    db.commit()
+    db.refresh(usuario)
+
+    return {
+        "message": f"Se han {'acreditado' if data.cantidad > 0 else 'descontado'} {abs(data.cantidad)} monedas a {usuario.nombre}.",
+        "id_usuario": usuario.id_usuario,
+        "email": usuario.email,
+        "saldo_anterior": saldo_anterior,
+        "saldo_nuevo": usuario.monedas
+    }
+
