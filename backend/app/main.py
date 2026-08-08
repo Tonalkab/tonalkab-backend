@@ -27,8 +27,13 @@ from app.models import alerta
 from app.models import skin 
 
 from app.core.tasks import limpiar_conexiones_inactivas
+from app.core.limiter import limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
 
-app = FastAPI()
+app = FastAPI(title="Tonalkab API", description="API Core para la plataforma de monitoreo inteligente Tonalkab")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ---------------------------------------------------------
 # CONFIGURACIÓN DE ARCHIVOS ESTÁTICOS (SKINS)

@@ -13,11 +13,19 @@ from app.models.lectura import LecturaSensores
 from app.models.configuracion_maceta import ConfiguracionMaceta
 from app.models.tipo_planta import TipoPlanta
 from app.models.skin import UsuarioSkin, MacetaSkin
-from app.models.predicciones_ml import PrediccionesML  # <-- 1. CORREGIDO: Importación añadida
+from app.models.predicciones_ml import PrediccionesML
+from app.models.conexion import ConexionDispositivo
 
 # Esquemas (Pydantic)
-# 🌟 Añadido ForzarRiegoEdgeRequest a las importaciones
-from app.schemas.maceta import MacetaCreate, MacetaResponse, MacetaCreateResponse, MacetaUpdatePlanta, ConfiguracionCreate, ForzarRiegoEdgeRequest
+from app.schemas.maceta import (
+    MacetaCreate, 
+    MacetaResponse, 
+    MacetaCreateResponse, 
+    MacetaUpdatePlanta, 
+    ConfiguracionCreate, 
+    ForzarRiegoEdgeRequest,
+    MacetaDashboardResponse
+)
 from app.schemas.device import LecturaResponse 
 
 router = APIRouter(prefix="/macetas", tags=["Macetas"])
@@ -89,7 +97,7 @@ def registrar_maceta(
     return db_maceta
 
 # ==========================================
-# ENDPOINT: Listar Macetas
+# ENDPOINT: Listar Macetas (Básico)
 # ==========================================
 @router.get("/", response_model=List[MacetaResponse])
 def listar_macetas(
@@ -102,6 +110,69 @@ def listar_macetas(
     ).all()
     
     return macetas
+
+# ==========================================
+# ENDPOINT: Dashboard Unificado (Anti N+1 Queries)
+# ==========================================
+@router.get("/dashboard", response_model=List[MacetaDashboardResponse])
+def obtener_dashboard_macetas(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Retorna todas las macetas del usuario con su última telemetría, 
+    ficha botánica, skin activa y estado de red en una sola respuesta.
+    Optimiza el consumo en la app móvil evitando consultas en bucle.
+    """
+    macetas = db.query(Maceta).filter(
+        Maceta.id_usuario == current_user.id_usuario
+    ).all()
+
+    ahora = datetime.utcnow()
+    resultado = []
+
+    for m in macetas:
+        # 1. Planta asociada
+        planta = db.query(TipoPlanta).filter(TipoPlanta.id_tipo_planta == m.id_tipo_planta).first()
+
+        # 2. Última lectura de sensores
+        lectura = db.query(LecturaSensores).filter(
+            LecturaSensores.id_maceta == m.id_maceta
+        ).order_by(LecturaSensores.fecha_hora.desc()).first()
+
+        # 3. Estado de conexión
+        conexion_db = db.query(ConexionDispositivo).filter(
+            ConexionDispositivo.id_maceta == m.id_maceta
+        ).first()
+
+        conexion_info = None
+        if conexion_db:
+            minutos_inactivos = int((ahora - conexion_db.ultima_conexion).total_seconds() / 60)
+            estado_real = "desconectado" if minutos_inactivos > 5 else "conectado"
+            conexion_info = {
+                "id_conexion": conexion_db.id_conexion,
+                "ssid": conexion_db.ssid,
+                "rssi": conexion_db.rssi,
+                "ip_dispositivo": conexion_db.ip_dispositivo,
+                "estado_conexion": conexion_db.estado_conexion,
+                "ultima_conexion": conexion_db.ultima_conexion,
+                "estado_real": estado_real,
+                "minutos_desconectado": minutos_inactivos if estado_real == "desconectado" else 0
+            }
+
+        resultado.append({
+            "id_maceta": m.id_maceta,
+            "nombre_maceta": m.nombre_maceta,
+            "id_tipo_planta": m.id_tipo_planta,
+            "id_estado_dispositivo": m.id_estado_dispositivo,
+            "fecha_registro": m.fecha_registro,
+            "skin_activa": m.skin_activa,
+            "tipo_planta": planta,
+            "lectura": lectura,
+            "conexion": conexion_info
+        })
+
+    return resultado
 
 # ==========================================
 # ENDPOINT: Lectura Actual (Tiempo Real)

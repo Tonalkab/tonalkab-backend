@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from datetime import datetime  # <--- IMPORTANTE: Para el último login
 
@@ -10,6 +10,7 @@ from app.schemas.auth import LoginRequest, GoogleAuthRequest
 
 from app.core.security import verify_password, create_access_token, verify_token
 from app.core.google_auth import verify_google_token
+from app.core.limiter import limiter
 
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -44,9 +45,10 @@ def get_current_user(
 
     return user
 
-# 🔑 LOGIN TRADICIONAL (Mejorado)
+# 🔑 LOGIN TRADICIONAL (Mejorado con Rate Limiter)
 @router.post("/login")
-def login(data: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
     # 1. Buscar usuario por email
     user = db.query(Usuario).filter(Usuario.email == data.email).first()
 

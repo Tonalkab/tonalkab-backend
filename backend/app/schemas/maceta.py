@@ -2,8 +2,11 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional 
 
-# Importamos el esquema de la Skin
+# Importamos los esquemas relacionados
 from app.schemas.skin import SkinBase
+from app.schemas.botanica import TipoPlantaResponse
+from app.schemas.device import LecturaResponse
+from app.schemas.conexion import ConexionResponse
 
 class MacetaCreate(BaseModel):
     nombre_maceta: str
@@ -18,6 +21,21 @@ class MacetaResponse(BaseModel):
     
     # Campo para incluir la skin activa de la maceta
     skin_activa: Optional[SkinBase] = None
+
+    class Config:
+        from_attributes = True
+
+# --- ESQUEMA UNIFICADO DE DASHBOARD (ELIMINA N+1 QUERIES) ---
+class MacetaDashboardResponse(BaseModel):
+    id_maceta: int
+    nombre_maceta: str
+    id_tipo_planta: int
+    id_estado_dispositivo: int
+    fecha_registro: datetime
+    skin_activa: Optional[SkinBase] = None
+    tipo_planta: Optional[TipoPlantaResponse] = None
+    lectura: Optional[LecturaResponse] = None
+    conexion: Optional[ConexionResponse] = None
 
     class Config:
         from_attributes = True

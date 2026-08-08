@@ -1,0 +1,2227 @@
+contamos con tres repositorios
+
+tonalkab-backend
+tonalkab-firmware
+tonalkab-mobile
+
+Diccionario de datos:
+
+🧩 1. Usuario
+👉 Tipo: Entidad principal
+Descripción:
+Almacena la información de los usuarios del sistema, incluyendo datos de acceso, perfil y control de actividad.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_usuario	INT	11	PK, NOT NULL, AUTO_INCREMENT	Identificador único del usuario	1
+nombre	VARCHAR	100	NOT NULL	Nombre del usuario	"Juan Pérez"
+email	VARCHAR	150	UNIQUE, NOT NULL	Correo electrónico	"juan@gmail.com"
+password_hash	VARCHAR	255	NOT NULL	Contraseña cifrada	"$2b$10$abc..."
+foto_perfil_url	VARCHAR	255	NULL	URL de imagen de perfil	"https://img.com/user.jpg"
+fecha_registro	DATETIME	-	NOT NULL	Fecha de registro	"2026-03-29 10:30:00"
+id_estado_cuenta	INT	11	FK, NOT NULL	Estado del usuario	1
+ultimo_login	DATETIME	-	NULL	Último acceso	"2026-03-29 12:00:00"
+created_at	DATETIME	-	NOT NULL	Fecha de creación	"2026-03-29 10:30:00"
+updated_at	DATETIME	-	NOT NULL	Última actualización	"2026-03-29 12:00:00"
+deleted_at	DATETIME	-	NULL	Eliminación lógica	NULL
+
+🔐 2. AuthProvider
+👉 Tipo: Entidad principal
+Descripción:
+Gestiona los métodos de autenticación externos (como Google) asociados a cada usuario.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_auth	INT	11	PK, NOT NULL	Identificador	1
+id_usuario	INT	11	FK, NOT NULL	Usuario asociado	1
+provider	VARCHAR	50	NOT NULL	Proveedor de autenticación	"google"
+provider_id	VARCHAR	100	NOT NULL	ID del proveedor	"10987654321"
+created_at	DATETIME	-	NOT NULL	Fecha de registro	"2026-03-29 10:35:00"
+
+🪴 3. Maceta
+👉 Tipo: Entidad principal
+Descripción:
+Representa cada dispositivo físico (maceta inteligente), incluyendo su estado, configuración y relación con el usuario.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_maceta	INT	11	PK, NOT NULL	Identificador	1
+id_usuario	INT	11	FK, NOT NULL	Usuario propietario	1
+mac_address	VARCHAR	17	UNIQUE, NOT NULL	Dirección MAC	"AA:BB:CC:DD:EE:FF"
+token_hash	VARCHAR	255	NOT NULL	Token cifrado	"XJH78@#..."
+nombre_maceta	VARCHAR	100	NOT NULL	Nombre asignado	"Maceta Sala"
+version_firmware	VARCHAR	50	NOT NULL	Versión firmware	"v1.2.0"
+id_tipo_planta	INT	11	FK, NOT NULL	Tipo de planta	3
+id_estado_dispositivo	INT	11	FK, NOT NULL	Estado del dispositivo	1
+id_configuracion_actual	INT	11	FK, NOT NULL	Configuración activa	5
+fecha_registro	DATETIME	-	NOT NULL	Registro	"2026-03-29 11:00:00"
+ultima_actividad	DATETIME	-	NULL	Última comunicación	"2026-03-29 12:10:00"
+created_at	DATETIME	-	NOT NULL	Creación	"2026-03-29 11:00:00"
+updated_at	DATETIME	-	NOT NULL	Actualización	"2026-03-29 12:10:00"
+
+🧾 4. EstadoDispositivo
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define los posibles estados operativos de una maceta.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_estado	INT	11	PK, NOT NULL	Identificador	1
+nombre	VARCHAR	50	NOT NULL	Nombre del estado	"activo"
+Valores posibles
+id_estado	nombre
+1	activo
+2	desconectado
+3	mantenimiento
+
+🧾 5. EstadoCuenta
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define los estados en los que puede estar una cuenta de usuario.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_estado_cuenta	INT	11	PK, NOT NULL	Identificador	1
+nombre	VARCHAR	50	NOT NULL	Estado de la cuenta	"activo"
+Valores posibles
+id_estado_cuenta	nombre
+1	activo
+2	suspendido
+3	Eliminado
+
+
+🌿 6. TipoPlanta
+👉 Tipo: Entidad principal
+Descripción:
+Contiene la información base de cada tipo de planta, incluyendo sus necesidades ambientales, características físicas y parámetros utilizados para automatizar el riego y análisis inteligente.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_tipo_planta	INT	11	PK, NOT NULL	Identificador	1
+nombre_planta	VARCHAR	100	NOT NULL	Nombre de la planta	"Aloe Vera"
+humedad_suelo_min	DECIMAL	5,2	NOT NULL	Humedad mínima del suelo (%)	30.00
+humedad_suelo_max	DECIMAL	5,2	NOT NULL	Humedad máxima del suelo (%)	60.00
+humedad_ambiente_min	DECIMAL	5,2	NOT NULL	Humedad ambiente mínima (%)	40.00
+humedad_ambiente_max	DECIMAL	5,2	NOT NULL	Humedad ambiente máxima (%)	70.00
+temperatura_min	DECIMAL	5,2	NOT NULL	Temperatura mínima (°C)	18.00
+temperatura_max	DECIMAL	5,2	NOT NULL	Temperatura máxima (°C)	30.00
+tiempo_min_entre_riegos_dias	INT	11	NOT NULL	Días entre riegos	3
+sensibilidad_luz_id	INT	11	FK, NOT NULL	Nivel de luz requerido	3
+tolerancia_exceso_agua_id	INT	11	FK, NOT NULL	Tolerancia al exceso de agua	2
+tipo_planta_id	INT	11	FK, NOT NULL	Clasificación (interior/exterior)	1
+tipo_suelo_id	INT	11	FK, NOT NULL	Tipo de suelo recomendado	3
+consumo_agua_id	INT	11	FK, NOT NULL	Nivel de consumo de agua	2
+profundidad_raiz_cm	INT	11	NOT NULL	Profundidad de raíz (cm)	15
+descripcion	TEXT	-	NULL	Descripción general	"Planta medicinal"
+origen_geografico	VARCHAR	100	NULL	Origen	"África"
+historia	TEXT	-	NULL	Historia	"Uso ancestral"
+cuidados_generales	TEXT	-	NULL	Cuidados	"Evitar exceso de agua"
+nivel_dificultad	INT	11	NOT NULL	Dificultad de cuidado	1
+imagen_url	VARCHAR	255	NULL	Imagen	"img.jpg"
+
+📶 7. ConexionDispositivo
+👉 Tipo: Entidad principal
+Descripción:
+Registra la información de conexión de la maceta a la red, incluyendo calidad de señal, IP y estado de conexión.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_conexion	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta asociada	1
+ssid	VARCHAR	100	NOT NULL	Nombre de red WiFi	"INFINITUM_1234"
+rssi	INT	11	NOT NULL	Intensidad señal (dBm)	-65
+ip_dispositivo	VARCHAR	45	NOT NULL	Dirección IP	"192.168.1.10"
+tipo_red	VARCHAR	20	NOT NULL	Tipo de red	"wifi"
+estado_conexion	VARCHAR	20	NOT NULL	Estado	"conectado"
+fecha_inicio_conexion	DATETIME	-	NOT NULL	Inicio de conexión	"2026-03-29 10:00:00"
+ultima_conexion	DATETIME	-	NULL	Última conexión	"2026-03-29 12:00:00"
+
+🌡️ 8. LecturaSensores
+👉 Tipo: Entidad principal
+Descripción:
+Almacena las mediciones capturadas por los sensores de la maceta en diferentes momentos.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_lectura	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta	1
+fecha_hora	DATETIME	-	NOT NULL	Fecha de lectura	"2026-03-29 12:00:00"
+humedad_suelo	DECIMAL	5,2	NOT NULL	Humedad del suelo (%)	45.50
+temperatura	DECIMAL	5,2	NOT NULL	Temperatura (°C)	23.10
+humedad_ambiental	DECIMAL	5,2	NOT NULL	Humedad ambiente (%)	60.20
+luz_uv_nivel	INT	11	NOT NULL	Nivel de luz UV	3
+luz_uv_valor	DECIMAL	5,2	NULL	Voltaje sensor UV	0.75
+nivel_agua	INT	11	NOT NULL	Nivel de agua (%)	80
+voltaje_bateria	DECIMAL	5,2	NOT NULL	Voltaje batería	3.70
+
+💧 9. ControlRiego
+👉 Tipo: Entidad principal
+Descripción:
+Registra los eventos de riego realizados por la maceta, incluyendo condiciones previas, resultados y contexto ambiental.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_riego	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta	1
+fecha_inicio_riego	DATETIME	-	NOT NULL	Inicio	"2026-03-29 12:05:00"
+fecha_fin_riego	DATETIME	-	NULL	Fin	"2026-03-29 12:07:00"
+humedad_antes	DECIMAL	5,2	NOT NULL	Humedad antes (%)	30.00
+humedad_despues	DECIMAL	5,2	NOT NULL	Humedad después (%)	55.00
+incremento_humedad	DECIMAL	5,2	NOT NULL	Incremento (%)	25.00
+humedad_objetivo_en_momento	DECIMAL	5,2	NOT NULL	Objetivo (%)	50.00
+cantidad_agua_ml	DECIMAL	6,2	NOT NULL	Agua aplicada (ml)	250.00
+duracion_bomba	INT	11	NOT NULL	Duración (s)	120
+temperatura_en_momento	DECIMAL	5,2	NOT NULL	Temperatura en ese momento	24.00
+luz_en_momento	INT	11	NOT NULL	Nivel de luz en ese momento	3
+id_tipo_activacion	INT	11	FK, NOT NULL	Tipo de activación	2
+id_prediccion_ml	INT	11	FK, NULL	Predicción asociada	NULL
+id_estado_registro	INT	11	FK, NOT NULL	Estado del riego	1
+resultado_riego	VARCHAR	50	NOT NULL	Resultado	"exitoso"
+
+⚙️ 10. TipoActivacion
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define los tipos de activación del riego dentro del sistema.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_tipo_activacion	INT	11	PK, NOT NULL	Identificador	1
+nombre	VARCHAR	50	NOT NULL	Tipo de activación	"manual"
+Valores posibles
+id_tipo_activacion	nombre
+(1, 'Manual / App'), 
+(2, 'Edge (Biológico)'), 
+(3, 'Timeout (Mantenimiento)'), 
+(4, 'Lluvia / Externo');
+
+📊 11. EstadoRegistro
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define los posibles estados de un registro de riego, indicando si fue exitoso, fallido o se encuentra en proceso.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_estado_registro	INT	11	PK, NOT NULL	Identificador	1
+nombre	VARCHAR	50	NOT NULL	Estado del registro	"exitoso"
+Valores posibles
+id_estado_registro	nombre
+1	exitoso
+2	fallido
+3	en_proceso
+
+🔋 12. EstadoEnergia
+👉 Tipo: Entidad principal
+Descripción:
+Almacena información del estado energético de la maceta, incluyendo batería, panel solar y energía generada.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_energia	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta	1
+fecha_hora	DATETIME	-	NOT NULL	Fecha del registro	"2026-03-29 12:00:00"
+nivel_bateria	DECIMAL	5,2	NOT NULL	Nivel de batería (%)	85.50
+voltaje_panel	DECIMAL	5,2	NOT NULL	Voltaje del panel (V)	5.20
+corriente_generada	DECIMAL	5,2	NOT NULL	Corriente generada (A)	0.80
+energia_generada	DECIMAL	6,2	NOT NULL	Energía generada (Wh)	12.50
+
+🚨 13. Alerta
+👉 Tipo: Entidad principal
+Descripción:
+Registra las alertas generadas por el sistema ante condiciones anómalas o eventos importantes en la maceta.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_alerta	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta	1
+id_tipo_alerta	INT	11	FK, NOT NULL	Tipo de alerta	2
+mensaje	TEXT	-	NOT NULL	Descripción de la alerta	"Nivel de agua bajo"
+fecha_hora	DATETIME	-	NOT NULL	Fecha	"2026-03-29 12:10:00"
+id_estado_alerta	INT	11	FK, NOT NULL	Estado de la alerta	1
+id_prioridad_alerta	INT	11	FK, NOT NULL	Prioridad	3
+vista_usuario	BOOLEAN	-	NOT NULL	Vista por el usuario	FALSE
+
+🚨 14. TipoAlerta
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define los tipos de alertas que puede generar el sistema.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_tipo_alerta	INT	11	PK, NOT NULL	Identificador	1
+nombre	VARCHAR	50	NOT NULL	Tipo de alerta	"bateria_baja"
+Valores posibles
+id_tipo_alerta	nombre
+1	baja_humedad
+2	bateria_baja
+3	desconexion
+4	nivel_agua_bajo
+
+🚦 15. PrioridadAlerta
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define los niveles de prioridad de las alertas generadas por el sistema.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_prioridad_alerta	INT	11	PK, NOT NULL	Identificador	1
+nombre	VARCHAR	50	NOT NULL	Nivel de prioridad	"alta"
+Valores posibles
+id_prioridad_alerta	nombre
+1	baja
+2	media
+3	alta
+
+🔔 16. EstadoAlerta
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define los estados en los que puede encontrarse una alerta dentro del sistema.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_estado_alerta	INT	11	PK, NOT NULL	Identificador	1
+nombre	VARCHAR	50	NOT NULL	Estado de la alerta	"pendiente"
+Valores posibles
+id_estado_alerta	nombre
+1	pendiente
+2	vista
+3	resuelta
+
+🤖 17. EstadoPlantaIA (MEJORADA)
+👉 Tipo: Entidad principal
+Descripción:
+Almacena el análisis generado por el modelo de inteligencia artificial sobre el estado de la planta en un momento determinado, incluyendo diagnóstico, riesgos y recomendaciones.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_estado	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta	1
+fecha_hora	DATETIME	-	NOT NULL	Fecha del análisis	"2026-03-29 12:00:00"
+indice_salud	DECIMAL	5,2	NOT NULL	Índice de salud (%)	82.50
+diagnostico	TEXT	-	NOT NULL	Diagnóstico generado	"Planta saludable"
+recomendacion	TEXT	-	NOT NULL	Recomendación	"Regar en 2 días"
+riesgo_sobre_riego	DECIMAL	5,2	NOT NULL	Riesgo de exceso (%)	20.00
+riesgo_falta_agua	DECIMAL	5,2	NOT NULL	Riesgo de falta (%)	15.00
+confianza_modelo	DECIMAL	5,2	NOT NULL	Confianza del modelo (%)	91.20
+version_modelo	VARCHAR	50	NOT NULL	Versión del modelo	"v1.0.3"
+
+📊 18. PrediccionesML
+👉 Tipo: Entidad principal
+Descripción:
+Almacena las predicciones generadas por modelos de machine learning a partir de datos históricos de sensores.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_prediccion	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta	1
+id_lectura_base	INT	11	FK, NOT NULL	Lectura base	120
+fecha_generacion	DATETIME	-	NOT NULL	Fecha de generación	"2026-03-29 12:00:00"
+tipo_prediccion	VARCHAR	50	NOT NULL	Tipo de predicción	"humedad"
+valor_predicho	DECIMAL	8,2	NOT NULL	Valor estimado	55.30
+valor_real	DECIMAL	8,2	NULL	Valor real	NULL
+unidad_medida	VARCHAR	20	NOT NULL	Unidad	"%"
+periodo_pronostico	INT	11	NOT NULL	Tiempo a futuro (min)	180
+confianza_modelo	DECIMAL	5,2	NOT NULL	Confianza (%)	89.70
+version_modelo	VARCHAR	50	NOT NULL	Versión	"v1.0.3"
+error_prediccion	DECIMAL	8,2	NULL	Error de predicción	NULL
+
+⚙️ 19. HistorialFirmware
+👉 Tipo: Entidad principal
+Descripción:
+Registra el historial de actualizaciones de firmware de cada maceta, incluyendo versión instalada y resultado del proceso.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_firmware	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta	1
+version_firmware	VARCHAR	50	NOT NULL	Versión instalada	"v1.2.0"
+fecha_instalacion	DATETIME	-	NOT NULL	Fecha de instalación	"2026-03-28 15:00:00"
+resultado_actualizacion	VARCHAR	50	NOT NULL	Resultado	"exitosa"
+
+⚙️ 20. ConfiguracionMaceta (AJUSTADA)
+👉 Tipo: Entidad principal
+Descripción:
+Almacena las configuraciones aplicadas a la maceta a lo largo del tiempo, permitiendo mantener un historial y ajustar parámetros de riego automáticamente o por el usuario.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_configuracion	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta	1
+fecha_configuracion	DATETIME	-	NOT NULL	Fecha de configuración	"2026-03-29 11:00:00"
+humedad_suelo_min	DECIMAL	5,2	NOT NULL	Humedad mínima (%)	30.00
+humedad_suelo_max	DECIMAL	5,2	NOT NULL	Humedad máxima (%)	60.00
+tiempo_min_entre_riegos_dias	INT	11	NOT NULL	Días entre riegos	3
+modo_operacion	VARCHAR	20	NOT NULL	Modo	"automatico"
+origen_configuracion	VARCHAR	50	NOT NULL	Origen	"usuario"
+activa	BOOLEAN	-	NOT NULL	Configuración activa	TRUE
+
+🔥 21. EventosSistema
+👉 Tipo: Entidad principal
+Descripción:
+Registra eventos relevantes del sistema relacionados con la operación y comportamiento de la maceta, como conexiones, errores o actualizaciones.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_evento	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta	1
+id_tipo_evento	INT	11	FK, NOT NULL	Tipo de evento	2
+descripcion	TEXT	-	NOT NULL	Descripción del evento	"Reconexión a red WiFi"
+fecha_hora	DATETIME	-	NOT NULL	Fecha del evento	"2026-03-29 12:05:00"
+
+🔥 22. TipoEventoSistema
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define los tipos de eventos que pueden ocurrir dentro del sistema.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_tipo_evento	INT	11	PK, NOT NULL	Identificador	1
+nombre	VARCHAR	50	NOT NULL	Tipo de evento	"conexion"
+Valores posibles
+id_tipo_evento	nombre
+1	conexion
+2	desconexion
+3	error
+4	actualizacion
+
+🌧️ 23. Clima (MEJORADA)
+👉 Tipo: Entidad principal
+Descripción:
+Almacena información climática externa obtenida desde una API, utilizada como contexto para apoyar decisiones de riego y detección de eventos como lluvia.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_clima	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta	1
+fecha_hora	DATETIME	-	NOT NULL	Fecha del registro	"2026-03-29 12:00:00"
+lluvia_mm	DECIMAL	6,2	NOT NULL	Cantidad de lluvia (mm)	2.50
+probabilidad_lluvia	DECIMAL	5,2	NOT NULL	Probabilidad de lluvia (%)	70.00
+humedad_exterior	DECIMAL	5,2	NOT NULL	Humedad exterior (%)	80.00
+temperatura_exterior	DECIMAL	5,2	NOT NULL	Temperatura exterior (°C)	22.00
+id_tipo_registro_clima	INT	11	FK, NOT NULL	Tipo de registro	1
+fuente_api	VARCHAR	50	NULL	API utilizada	"openweather"
+
+🌧️ 24. TipoRegistroClima
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define el tipo de datos climáticos registrados, diferenciando entre condiciones actuales y pronósticos.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_tipo_registro	INT	11	PK, NOT NULL	Identificador	1
+nombre	VARCHAR	50	NOT NULL	Tipo de registro	"actual"
+Valores posibles
+id_tipo_registro	nombre
+1	actual
+2	pronostico
+
+🌱 25. EventoRiegoExterno
+👉 Tipo: Entidad principal
+Descripción:
+Registra eventos de riego no generados directamente por el sistema, como lluvia o intervención manual, detectados mediante sensores o modelos de análisis.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_evento	INT	11	PK, NOT NULL	Identificador	1
+id_maceta	INT	11	FK, NOT NULL	Maceta	1
+fecha_hora	DATETIME	-	NOT NULL	Fecha del evento	"2026-03-29 11:30:00"
+humedad_antes	DECIMAL	5,2	NOT NULL	Humedad antes (%)	35.00
+humedad_despues	DECIMAL	5,2	NOT NULL	Humedad después (%)	60.00
+id_tipo_evento_estimado	INT	11	FK, NOT NULL	Tipo estimado	2
+confirmado_usuario	BOOLEAN	-	NOT NULL	Confirmado por usuario	TRUE
+id_tipo_evento_final	INT	11	FK, NOT NULL	Tipo final	2
+fuente_deteccion	VARCHAR	50	NULL	Método de detección	"ml"
+confianza	DECIMAL	5,2	NULL	Confianza (%)	91.20
+id_lectura_base	INT	11	FK, NULL	Lectura base	120
+probabilidad_lluvia	DECIMAL	5,2	NULL	Probabilidad de lluvia (%)	85.00
+
+🌱 26. TipoEventoRiego
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define los tipos de eventos de riego externos que pueden ocurrir en el sistema.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_tipo_evento	INT	11	PK, NOT NULL	Identificador	1
+nombre	VARCHAR	50	NOT NULL	Tipo de evento	"lluvia"
+Valores posibles
+id_tipo_evento	nombre
+1	manual
+2	lluvia
+3	desconocido
+4	otro
+
+
+🌞 SensibilidadLuz
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define los niveles de sensibilidad a la luz de las plantas, utilizados para comparar con los datos del sensor UV y determinar si la planta recibe la iluminación adecuada.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_sensibilidad_luz	INT	11	PK, NOT NULL	Identificador	1
+valor	VARCHAR	50	NOT NULL	Nivel de sensibilidad	"baja"
+Valores posibles
+id_sensibilidad_luz	valor
+1	baja
+2	media
+3	alta
+4	muy alta
+
+💧 ToleranciaExcesoAgua
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define el nivel de tolerancia de una planta al exceso de agua, útil para evitar sobre-riego y ajustar la lógica del sistema.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_tolerancia	INT	11	PK, NOT NULL	Identificador	1
+valor	VARCHAR	50	NOT NULL	Nivel de tolerancia	"media"
+Valores posibles
+id_tolerancia	valor
+1	baja
+2	media
+3	alta
+
+🌱 TipoPlantaCategoria
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Clasifica las plantas según el entorno donde pueden desarrollarse, lo cual influye en condiciones ambientales y configuración del sistema.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_tipo_planta	INT	11	PK, NOT NULL	Identificador	1
+valor	VARCHAR	50	NOT NULL	Tipo de planta	"interior"
+Valores posibles
+id_tipo_planta	valor
+1	interior
+2	exterior
+3	ambas
+
+🪨 TipoSuelo
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define los tipos de suelo en los que puede crecer una planta, lo cual influye directamente en la retención de agua y frecuencia de riego.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_tipo_suelo	INT	11	PK, NOT NULL	Identificador	1
+valor	VARCHAR	50	NOT NULL	Tipo de suelo	"arenoso"
+Valores posibles
+id_tipo_suelo	valor
+1	arenoso
+2	arcilloso
+3	mixto
+
+💦 ConsumoAgua
+👉 Tipo: 📚 Tabla catálogo
+Descripción:
+Define el nivel de consumo de agua de una planta, utilizado para ajustar la frecuencia y cantidad de riego.
+Atributo	Dominio	Longitud	Restricción	Descripción	Ejemplo
+id_consumo	INT	11	PK, NOT NULL	Identificador	1
+valor	VARCHAR	50	NOT NULL	Nivel de consumo	"medio"
+Valores posibles
+id_consumo	valor
+1	bajo
+2	medio
+3	alto
+
+
+Documentaciones:
+
+📄 Documentación de Despliegue Backend – Proyecto Tonalkab
+1. Introducción
+Este documento describe el proceso de despliegue del backend del sistema Tonalkab en un servidor VPS con Debian, utilizando contenedores Docker, base de datos MySQL, servidor web Nginx y configuración de HTTPS mediante certificados SSL.
+El objetivo es garantizar una infraestructura segura, escalable y alineada con buenas prácticas de producción.
+
+2. Arquitectura del Sistema
+La arquitectura implementada es la siguiente:
+Cliente → Internet → Nginx (Reverse Proxy) → FastAPI (Docker) → MySQL (Docker)
+Componentes:
+	• Backend: FastAPI (Python)
+	• Base de datos: MySQL 8.0
+	• Contenedorización: Docker + Docker Compose
+	• Servidor web: Nginx
+	• Seguridad: HTTPS (Let's Encrypt)
+	• Control de versiones: GitHub
+
+3. Configuración del Servidor (VPS)
+3.1 Sistema base
+	• Sistema operativo: Debian
+	• Acceso: SSH con usuario no root
+	• Actualización del sistema:
+sudo apt update && sudo apt upgrade -y
+
+3.2 Seguridad básica
+	• Desactivación de acceso root por SSH
+	• Configuración de firewall (UFW)
+Reglas activas:
+	• OpenSSH
+	• Nginx Full
+Esto asegura que solo los puertos necesarios estén expuestos (22, 80 y 443).
+
+4. Instalación de Docker
+Se instaló Docker desde el repositorio oficial para garantizar versiones actualizadas.
+Componentes instalados:
+	• Docker Engine
+	• Docker Compose Plugin
+	• containerd
+Configuración adicional:
+	• Ejecución sin sudo mediante grupo docker
+	• Servicio habilitado al iniciar el sistema
+
+5. Gestión del Código
+El proyecto se almacena en GitHub y se clona en el servidor en la ruta:
+/var/www/tonalkab
+Estructura principal:
+	• backend/
+	• docker-compose.yml
+
+6. Configuración de Variables de Entorno
+Se creó un archivo .env en el servidor con las siguientes variables:
+MYSQL_ROOT_PASSWORD=<password_seguro>
+MYSQL_DATABASE=tonalkab_db
+MYSQL_USER=tonalkab_user
+MYSQL_PASSWORD=<password_seguro>
+Estas variables permiten desacoplar credenciales del código fuente.
+
+7. Configuración de Docker Compose
+El sistema está definido mediante Docker Compose con dos servicios:
+7.1 Backend
+	• Construido desde Dockerfile
+	• Usa variables del archivo .env
+	• Conectado a red interna
+7.2 Base de Datos (MySQL)
+	• Imagen oficial MySQL 8.0
+	• Persistencia mediante volumen
+	• Variables de entorno para configuración inicial
+7.3 Red
+	• Red interna: tonalkab_net
+7.4 Seguridad de puertos
+El backend se expone únicamente en localhost:
+127.0.0.1:8000:8000
+Esto evita acceso externo directo.
+
+8. Despliegue del Sistema
+Comando de despliegue:
+docker compose up -d --build
+Verificación:
+docker ps
+docker compose logs -f
+
+9. Configuración de Nginx
+Se configuró Nginx como reverse proxy.
+Archivo:
+/etc/nginx/sites-available/tonalkab
+Configuración:
+	• Escucha en puerto 80
+	• Redirige tráfico a 127.0.0.1:8000
+	• Maneja cabeceras HTTP
+Activación:
+ln -s /etc/nginx/sites-available/tonalkab /etc/nginx/sites-enabled/
+systemctl restart nginx
+
+10. Configuración de Dominio
+Se configuró el subdominio:
+api.tonalkab.com
+Mediante un registro tipo A apuntando a la IP del VPS.
+
+11. Configuración de HTTPS
+Se utilizó Certbot para generar certificados SSL con Let's Encrypt.
+Instalación:
+sudo apt install certbot python3-certbot-nginx
+Generación:
+sudo certbot --nginx -d api.tonalkab.com
+Configuraciones aplicadas:
+	• Certificado SSL automático
+	• Redirección HTTP → HTTPS
+	• Renovación automática habilitada
+
+12. Seguridad Implementada
+	• Firewall activo (UFW)
+	• Backend no expuesto públicamente
+	• Base de datos aislada en red Docker
+	• Acceso SSH restringido
+	• Uso de HTTPS obligatorio
+
+13. Resultado Final
+El sistema queda accesible en:
+https://api.tonalkab.com
+Características:
+	• Comunicación segura (HTTPS)
+	• Arquitectura desacoplada
+	• Servicios contenerizados
+	• Base de datos persistente
+	• Infraestructura escalable
+
+14. Buenas Prácticas Aplicadas
+	• Uso de variables de entorno
+	• Separación de servicios
+	• Reverse proxy con Nginx
+	• Uso de Docker en producción
+	• Certificados SSL automáticos
+Minimización de exposición de puertos
+
+
+🪴 Proyecto Tonalkab – Backend & Desarrollo Inicial
+1. Introducción
+Este documento describe el desarrollo inicial del backend del sistema Tonalkab, incluyendo la arquitectura, tecnologías utilizadas, flujo de trabajo y estado actual del sistema.
+El objetivo es proporcionar una base sólida, escalable y alineada con buenas prácticas de desarrollo profesional.
+
+2. Arquitectura General
+El sistema sigue una arquitectura cliente-servidor basada en API REST.
+App móvil (Expo / React Native)
+↓
+FastAPI (Backend en Docker)
+↓
+MySQL (Base de datos en Docker)
+Características:
+	• Arquitectura desacoplada
+	• Backend basado en FastAPI
+	• Persistencia con MySQL
+	• Contenerización con Docker
+	• Comunicación vía HTTP (REST)
+
+3. Tecnologías Utilizadas
+Backend
+	• Python
+	• FastAPI
+	• SQLAlchemy (ORM)
+	• Pydantic (validación de datos)
+Base de datos
+	• MySQL 8.0
+Seguridad
+	• Hash de contraseñas con bcrypt (passlib)
+Infraestructura
+	• Docker
+	• Docker Compose
+Frontend móvil
+	• React Native (Expo)
+
+4. Estructura del Backend
+El backend sigue una arquitectura modular separando responsabilidades:
+app/
+│
+├── main.py # Punto de entrada
+├── db.py # Conexión a base de datos
+│
+├── models/ # Modelos (estructura de la BD)
+│ └── user.py
+│
+├── schemas/ # Validación de datos (entrada/salida)
+│ └── user.py
+│
+├── api/ # Endpoints
+│ ├── user.py
+│ └── auth.py
+│
+└── core/
+└── security.py # Hash de contraseñas
+
+5. Conceptos Clave de Arquitectura
+5.1 Modelos (models)
+Definen la estructura de las tablas en la base de datos.
+Ejemplo:
+	• Representan entidades persistentes
+	• Se traducen a tablas en MySQL
+	• Usan SQLAlchemy
+
+5.2 Schemas (schemas)
+Definen cómo se reciben y envían los datos en la API.
+Funciones:
+	• Validación de datos
+	• Control de tipos
+	• Ocultar información sensible
+Ejemplo:
+	• Entrada: password
+	• Base de datos: password_hash
+
+5.3 API (endpoints)
+Definen la lógica del sistema.
+Ejemplo:
+	• POST /users → crear usuario
+	• GET /users → listar usuarios
+	• POST /login → autenticación
+
+5.4 Flujo de datos
+App → API → Schema → Modelo → Base de datos
+
+6. Base de Datos
+Se utiliza MySQL con conexión mediante SQLAlchemy.
+Características:
+	• Creación automática de tablas
+	• Uso de ORM
+	• Manejo de sesiones
+Variables de entorno:
+	• MYSQL_USER
+	• MYSQL_PASSWORD
+	• MYSQL_DATABASE
+
+7. Contenerización (Docker)
+El sistema utiliza Docker para garantizar consistencia entre entornos.
+Servicios:
+Backend
+	• FastAPI
+	• Puerto 8000
+Base de datos
+	• MySQL 8
+	• Persistencia mediante volumen
+Red
+	• Red interna Docker
+
+8. Flujo de Desarrollo
+Se sigue el siguiente flujo profesional:
+Desarrollo local (Windows)
+↓
+Pruebas en local
+↓
+Commit (Git)
+↓
+Push (GitHub)
+↓
+Deploy en servidor (Debian)
+
+9. Integración con App Móvil
+Se desarrolló una app en Expo que permite:
+	• Registro de usuario
+	• Envío de datos al backend
+	• Consumo de endpoints REST
+Flujo:
+App → POST /users → Backend → MySQL
+
+10. Seguridad Implementada
+10.1 Hash de contraseñas
+	• Uso de bcrypt mediante passlib
+	• Nunca se almacenan contraseñas en texto plano
+10.2 Validación de datos
+	• Uso de Pydantic
+	• Validación de email y campos
+
+11. Problemas Técnicos Resueltos
+Durante el desarrollo se resolvieron:
+	• Conexión entre contenedores Docker
+	• Tiempo de espera de MySQL al iniciar
+	• Problemas de red (localhost vs IP)
+	• Errores de bcrypt por incompatibilidad de versiones
+	• Validación de email con email-validator
+
+12. Estado Actual del Sistema
+El sistema actualmente permite:
+	• Registro de usuarios
+	• Login básico (email/password)
+	• Hash seguro de contraseñas
+	• Persistencia en base de datos
+	• Comunicación completa app ↔ backend
+
+13. Buenas Prácticas Aplicadas
+	• Separación de responsabilidades (models, schemas, api)
+	• Uso de variables de entorno
+	• Docker desde el inicio
+	• Uso de ORM (SQLAlchemy)
+	• Validación con Pydantic
+	• Uso de Git para control de versiones
+
+
+🔐 Documentación – Implementación de Autenticación JWT
+Proyecto Tonalkab
+
+1. Introducción
+En esta fase del desarrollo se implementó un sistema completo de autenticación basado en JSON Web Tokens (JWT) para el backend del proyecto Tonalkab.
+El objetivo es permitir autenticación segura, manejo de sesiones sin estado y protección de endpoints, siguiendo buenas prácticas utilizadas en sistemas backend modernos.
+
+2. Concepto de JWT
+JWT (JSON Web Token) es un mecanismo de autenticación basado en tokens firmados que contienen información del usuario.
+El flujo general es:
+Login → Generación de token → Cliente guarda token → Requests autenticados
+El token incluye información como:
+	• Identificador del usuario (sub)
+	• Fecha de expiración (exp)
+Este token es firmado mediante una clave secreta, garantizando su integridad.
+
+3. Arquitectura de Autenticación
+La arquitectura implementada es la siguiente:
+App móvil → Login → Backend genera JWT
+↓
+App almacena token
+↓
+App envía token en cada request
+↓
+Backend valida token y permite acceso
+Esto elimina la necesidad de manejar sesiones en el servidor.
+
+4. Configuración del Sistema
+Se definieron variables de entorno para la configuración de JWT:
+JWT_SECRET_KEY
+JWT_ALGORITHM
+JWT_EXPIRE_MINUTES
+Estas variables permiten desacoplar la configuración de seguridad del código fuente.
+
+5. Implementación en el Backend
+5.1 Centralización en security.py
+El archivo core/security.py se convirtió en el módulo central de seguridad del sistema.
+Incluye:
+	• Hash de contraseñas (bcrypt)
+	• Verificación de contraseñas
+	• Generación de tokens JWT
+	• Validación de tokens
+Esto mantiene una arquitectura limpia y escalable.
+
+5.2 Generación de Token
+Se implementó una función para generar tokens:
+	• Recibe datos del usuario
+	• Agrega expiración
+	• Firma el token con SECRET_KEY
+	• Devuelve el token codificado
+Se utiliza el estándar:
+sub → identificador del usuario
+
+5.3 Validación de Token
+Se implementó una función para verificar tokens:
+	• Decodifica el token
+	• Valida firma y expiración
+	• Extrae el user_id desde "sub"
+	• Retorna el identificador del usuario
+Si el token es inválido o expirado, se rechaza.
+
+6. Modificación del Endpoint de Login
+El endpoint /login fue actualizado para:
+	• Validar credenciales
+	• Generar JWT
+	• Retornar token en formato estándar
+Formato de respuesta:
+{
+"access_token": "TOKEN",
+"token_type": "bearer"
+}
+También se mejoró la seguridad:
+	• Uso de código HTTP 401
+	• Mensaje genérico para evitar filtración de información
+
+7. Autenticación en Requests
+El cliente debe enviar el token en cada request mediante el header:
+Authorization: Bearer
+Este header es interceptado por el backend para validar la autenticación.
+
+8. Obtención de Usuario Autenticado
+Se implementó la función get_current_user como dependencia de FastAPI.
+Su funcionamiento:
+	• Extrae el token del header
+	• Verifica el token
+	• Obtiene el user_id
+	• Consulta el usuario en la base de datos
+	• Retorna el objeto usuario
+Esto permite inyectar automáticamente el usuario autenticado en cualquier endpoint.
+
+9. Protección de Endpoints
+Los endpoints protegidos utilizan:
+Depends(get_current_user)
+Ejemplo:
+@router.get("/me")
+def get_me(current_user = Depends(get_current_user)):
+return current_user
+Esto asegura que solo usuarios autenticados puedan acceder.
+
+10. Uso de Schemas
+Se integraron schemas de Pydantic para:
+	• Controlar la salida de datos
+	• Evitar exposición de información sensible
+	• Estandarizar respuestas
+Ejemplo:
+UserResponse evita exponer password_hash.
+
+11. Flujo Completo de Autenticación
+Registro:
+App → POST /users → Backend → Base de datos
+Login:
+App → POST /login → Backend → JWT
+Uso del sistema:
+App → Request con token → Backend valida → Acceso permitido
+
+12. Seguridad Implementada
+	• Contraseñas hasheadas con bcrypt
+	• Tokens firmados con clave secreta
+	• Expiración de tokens
+	• Validación en cada request
+	• Ocultamiento de errores de autenticación
+	• No almacenamiento de sesiones en servidor
+
+13. Ventajas del Enfoque
+	• Escalabilidad (stateless)
+	• Compatible con apps móviles
+	• Integración sencilla con otros servicios
+	• Base para autenticación externa (Google, etc.)
+	• Arquitectura desacoplada
+
+14. Preparación para Google Sign-In
+La implementación de JWT deja preparado el sistema para autenticación externa.
+Flujo futuro:
+Google → Validación → Creación/consulta de usuario → Generación de JWT propio
+Esto se apoya en la tabla AuthProvider definida en la base de datos.
+
+15. Estado Actual
+El sistema actualmente permite:
+	• Registro de usuarios
+	• Login con JWT
+	• Protección de endpoints
+	• Obtención de usuario autenticado
+Integración con app móvil mediante token
+
+🔐 Documentación – Configuración de Google OAuth (Google Sign-In)
+Proyecto: Tonalkab
+1. Introducción
+
+En esta fase se configuró la autenticación con Google mediante OAuth 2.0 desde la consola de Google Cloud.
+El objetivo es permitir el inicio de sesión con cuentas de Google de forma segura, validando los tokens en el backend y manteniendo JWT como mecanismo principal de autenticación.
+
+Esta integración sigue un enfoque profesional donde:
+
+• Google se usa únicamente como proveedor de identidad  
+• El backend valida los tokens  
+• El sistema genera su propio JWT  
+• No se depende directamente de Google para autenticación interna  
+2. Plataforma utilizada
+
+Se utilizó Google Cloud Console para configurar el acceso OAuth.
+
+3. Configuración del proyecto en Google Cloud
+3.1 Creación del proyecto
+
+Se creó un proyecto en Google Cloud con el nombre:
+
+Tonalkab
+
+Este proyecto centraliza la configuración de autenticación con Google.
+
+4. Configuración de la pantalla de consentimiento OAuth
+
+Antes de generar credenciales, se configuró la pantalla de consentimiento OAuth.
+
+4.1 Tipo de usuario
+
+Se seleccionó:
+
+External
+
+Esto permite que cualquier usuario con cuenta de Google pueda autenticarse en la aplicación.
+
+4.2 Información de la aplicación
+
+Se configuraron los siguientes campos:
+
+• Nombre de la app: Tonalkab  
+• Email de soporte: (correo del desarrollador)  
+• Email de contacto: (correo del desarrollador)  
+4.3 Permisos (Scopes)
+
+Se utilizaron los scopes básicos:
+
+email  
+profile  
+openid  
+
+Estos permiten obtener:
+
+• Correo electrónico  
+• Nombre del usuario  
+• Foto de perfil  
+• Identificador único de Google  
+4.4 Usuarios de prueba
+
+Se agregaron usuarios de prueba para permitir el uso del login mientras la app está en modo desarrollo.
+
+Esto es necesario ya que la aplicación se encuentra en estado:
+
+Testing
+5. Creación del OAuth Client ID
+
+Se generó un ID de cliente OAuth desde:
+
+APIs & Services → Credentials → Create Credentials → OAuth Client ID
+5.1 Tipo de aplicación
+
+Se seleccionó:
+
+Web Application
+
+Esto se utiliza debido a la integración con Expo, que requiere un flujo basado en navegador.
+
+5.2 Orígenes autorizados
+
+Se configuraron los siguientes:
+
+http://localhost  
+https://auth.expo.io  
+5.3 URI de redirección autorizada
+
+Se configuró el siguiente URI:
+
+https://auth.expo.io/@tonalkab/tonalkab  
+
+Este URI corresponde al flujo de autenticación manejado por Expo.
+
+6. Credenciales generadas
+
+Como resultado, se obtuvo:
+
+CLIENT_ID
+
+Este identificador es único para la aplicación y será utilizado en:
+
+• App móvil (Expo)  
+• Backend (validación del token)  
+
+
+Documentación Técnica: Resolución de Errores y Estabilización - Proyecto Tonalkab (Backend)
+📌 Resumen Ejecutivo
+Durante la configuración del entorno de desarrollo local y producción del sistema Tonalkab (FastAPI + MySQL + Docker), se identificaron y resolvieron una serie de fallos en cascada. Estos incluyeron conflictos de red, condiciones de carrera (tiempos de arranque de contenedores), mala estructuración de paquetes en Python y omisión de dependencias críticas. El entorno ahora es 100% estable y replicable.
+
+🛑 Fase 1: Problemas de Infraestructura y Orquestación (Docker)
+1.1 Conflicto de Puertos en Desarrollo (Port is already in use)
+	• Síntoma: Al ejecutar docker compose up, Docker arrojaba un error indicando que el puerto 8000 ya estaba ocupado.
+	• Causa Raíz: El archivo docker-compose.yml (base) exponía el puerto 127.0.0.1:8000:8000 por seguridad en el VPS. El archivo local docker-compose.override.yml intentaba añadir 8000:8000. Docker Compose V2, por defecto, "suma" los puertos en lugar de reemplazarlos, causando un choque consigo mismo.
+	• Solución: Se implementó la etiqueta personalizada !override en el archivo de desarrollo para forzar a Docker a ignorar la configuración del archivo base.
+YAML
+
+# docker-compose.override.yml
+services:
+  backend:
+    ports: !override
+      - "8000:8000"
+1.2 Caída del Backend por Desincronización (Crash Loop / Error 111)
+	• Síntoma: El contenedor tonalkab_backend se reiniciaba infinitamente. Los logs mostraban Can't connect to MySQL server on 'db' ([Errno 111] Connection refused).
+	• Causa Raíz: El contenedor de FastAPI arrancaba en milisegundos e intentaba conectarse a MySQL. Sin embargo, el motor InnoDB de MySQL tarda unos 10-15 segundos en inicializarse y estar listo para recibir conexiones. Al fallar la conexión, Python lanzaba una excepción fatal.
+	• Solución: Se implementó un healthcheck en el servicio de la base de datos y se configuró el backend con una espera activa condicionada.
+YAML
+
+# docker-compose.yml
+services:
+  backend:
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+🛑 Fase 2: Problemas Estructurales de Python y FastAPI
+2.1 Fallos de Importación Absoluta (ModuleNotFoundError)
+	• Síntoma: Los logs del backend mostraban ModuleNotFoundError: No module named 'app.models.auth_provider'.
+	• Causa Raíz: El Dockerfile original usaba un comando RUN pip install ... en línea muy largo y no definía el contexto de ejecución para que Python encontrara la carpeta /app como un módulo raíz válido. Además, faltaban los archivos inicializadores de paquetes.
+	• Solución: 1. Se crearon archivos __init__.py vacíos en todas las subcarpetas de app/. 2. Se optimizó el Dockerfile para usar un archivo requirements.txt (mejorando la caché) y se añadió la variable global PYTHONPATH.
+Dockerfile
+
+# Dockerfile Optimizado
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+ENV PYTHONPATH=/app
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+2.2 Código y Lógica Faltante (Google Auth)
+	• Síntoma: A pesar de arreglar las rutas, el error mutó a ImportError: cannot import name 'AuthProvider'.
+	• Causa Raíz: Al revisar el código fuente, se detectó que el desarrollador había programado el endpoint de login con Google (@router.post("/auth/google")) en auth.py, pero había olvidado crear los archivos físicos que daban soporte a esa lógica.
+	• Solución: Se programaron y crearon los 3 bloques de código faltantes:
+		1. El Modelo: Se creó app/models/auth_provider.py con la clase AuthProvider en SQLAlchemy.
+		2. El Validador: Se creó app/core/google_auth.py con la función verify_google_token.
+		3. El Esquema: Se añadió GoogleAuthRequest al archivo app/schemas/auth.py.
+
+🛑 Fase 3: Dependencias Ocultas
+3.1 La Librería "Fantasma" de Google
+	• Síntoma: El último error registrado fue ModuleNotFoundError: No module named 'requests'.
+	• Causa Raíz: La librería oficial google-auth (usada para validar los tokens de sesión) depende internamente de la librería requests para hacer llamadas HTTP a los servidores de Google. Esta dependencia no venía incluida por defecto.
+	• Solución: Se añadió explícitamente requests a la lista de dependencias del proyecto.
+Archivo requirements.txt Final:
+Plaintext
+
+fastapi
+uvicorn
+pymysql
+sqlalchemy
+cryptography
+email-validator
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
+python-jose[cryptography]
+google-auth
+requests
+
+
+🔐 Documentación – Implementación de Google Sign-In en Backend
+Proyecto: Tonalkab
+
+1. Introducción
+En esta fase se implementó la autenticación mediante Google Sign-In en el backend del sistema Tonalkab.
+El objetivo es permitir a los usuarios iniciar sesión con su cuenta de Google, manteniendo como sistema principal de autenticación el uso de JSON Web Tokens (JWT) generados por el propio backend.
+Este enfoque sigue buenas prácticas de seguridad y arquitectura, donde:
+	• Google actúa únicamente como proveedor de identidad
+	• El backend valida los tokens recibidos
+	• El sistema genera su propio JWT
+	• No se depende directamente de Google para la gestión de sesiones
+
+2. Arquitectura de Autenticación
+El flujo de autenticación implementado es el siguiente:
+App móvil (Expo)
+↓
+Google Sign-In
+↓
+Obtención de id_token
+↓
+POST /auth/google
+↓
+Backend valida token con Google
+↓
+Consulta o creación de usuario en base de datos
+↓
+Generación de JWT propio
+↓
+Respuesta al cliente
+
+3. Modelo de Base de Datos
+Para soportar múltiples métodos de autenticación, se implementó la tabla AuthProvider, la cual permite asociar proveedores externos a los usuarios.
+📌 Estructura
+	• id
+	• id_usuario (FK → Usuario)
+	• provider (ej: "google")
+	• provider_id (ID único del proveedor, ej: sub de Google)
+Este diseño permite escalar fácilmente a otros proveedores como Apple, Facebook, etc.
+
+4. Implementación del Validador de Google
+Se creó un módulo encargado de validar el id_token recibido desde el cliente.
+📁 Archivo: core/google_auth.py
+from google.oauth2 import id_token
+from google.auth.transport import requests
+from fastapi import HTTPException
+import os
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "tu-client-id-aqui")
+def verify_google_token(token: str):
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            token,
+            requests.Request(),
+            GOOGLE_CLIENT_ID
+        )
+# Validación adicional de seguridad
+        if idinfo["iss"] not in ["accounts.google.com", "https://accounts.google.com"]:
+            raise ValueError("Invalid issuer")
+return idinfo
+except ValueError:
+        raise HTTPException(status_code=400, detail="Token de Google inválido")
+🔍 Funcionalidad
+	• Verifica la firma del token con Google
+	• Valida la expiración
+	• Verifica el audience (CLIENT_ID)
+	• Extrae información del usuario
+	• Aplica validaciones adicionales de seguridad
+
+5. Modelo AuthProvider
+Se implementó el modelo ORM para representar los proveedores de autenticación.
+📁 Archivo: models/auth_provider.py
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
+from app.db import Base
+class AuthProvider(Base):
+    __tablename__ = "auth_providers"
+id = Column(Integer, primary_key=True, index=True)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"))
+    provider = Column(String(50), nullable=False)
+    provider_id = Column(String(255), nullable=False)
+__table_args__ = (
+        UniqueConstraint("provider", "provider_id", name="uq_provider_user"),
+    )
+🔍 Características
+	• Relación con tabla de usuarios
+	• Soporte para múltiples proveedores
+	• Restricción única para evitar duplicados
+	• Diseño escalable
+
+6. Endpoint de Autenticación con Google
+Se implementó el endpoint /auth/google dentro del módulo de autenticación.
+📌 Endpoint
+POST /auth/google
+📥 Request
+{
+  "id_token": "TOKEN_DE_GOOGLE"
+}
+
+⚙️ Lógica implementada
+	1. Validación del token con Google
+	2. Extracción de datos del usuario
+	3. Búsqueda del usuario en la base de datos
+	4. Manejo de escenarios:
+🟢 Usuario nuevo
+	• Se crea un nuevo registro en Usuario
+	• Se crea un registro en AuthProvider
+🟡 Usuario existente con Google
+	• Se valida que el provider_id coincida
+🔴 Usuario existente sin Google
+	• Se rechaza el acceso por seguridad
+
+🔐 Generación de JWT
+Una vez validado el usuario:
+access_token = create_access_token(
+    data={"sub": str(user.id_usuario)}
+)
+
+📤 Response
+{
+  "access_token": "TOKEN",
+  "token_type": "bearer"
+}
+
+7. Seguridad Implementada
+	• Validación del token en backend (no confiar en el cliente)
+	• Verificación del issuer (iss)
+	• Verificación del audience (CLIENT_ID)
+	• Uso de JWT propio
+	• No vinculación automática de cuentas
+	• Manejo seguro de errores
+
+8. Integración con JWT existente
+El sistema reutiliza la implementación de JWT ya existente, permitiendo que:
+	• El login con Google y el login tradicional usen el mismo mecanismo
+	• Los endpoints protegidos funcionen sin modificaciones
+	• get_current_user opere de forma transparente
+
+9. Configuración de Entorno
+Se requiere definir la variable:
+GOOGLE_CLIENT_ID=tu_client_id_real
+Esta variable es utilizada tanto en desarrollo como en producción.
+
+10. Dependencias
+Se añadieron las siguientes dependencias al proyecto:
+google-auth
+requests
+
+11. Resultado Final
+El sistema ahora permite:
+	• Login con email y contraseña
+	• Login con Google
+	• Generación de JWT unificado
+	• Soporte para múltiples proveedores
+	• Arquitectura escalable y segura
+
+12. Conclusión
+La implementación de Google Sign-In en el backend de Tonalkab se realizó siguiendo buenas prácticas de seguridad y arquitectura, integrándose correctamente con el sistema de autenticación existente basado en JWT.
+El sistema queda preparado para escalar hacia nuevos proveedores de autenticación y mantener una estructura sólida en entornos de producción.
+
+🔐 Documentación – Fase de Autenticación JWT
+Proyecto: Tonalkab
+
+1. Introducción
+En esta fase se implementó y consolidó el sistema de autenticación del backend del proyecto Tonalkab utilizando JSON Web Tokens (JWT).
+El objetivo fue garantizar un acceso seguro, sin estado (stateless), y establecer las bases para proteger los endpoints del sistema antes de avanzar a funcionalidades principales como gestión de macetas.
+
+2. Arquitectura de Autenticación
+El flujo implementado es el siguiente:
+Login → Generación de JWT → Cliente almacena token → Requests autenticados → Backend valida token
+Este enfoque elimina la necesidad de sesiones en servidor y permite escalabilidad.
+
+3. Componentes Implementados
+3.1 Endpoint de Login
+Ruta:
+POST /login
+Funcionalidad:
+	• Validación de credenciales (email + password)
+	• Verificación de contraseña hasheada (bcrypt)
+	• Validación del estado de la cuenta
+	• Actualización del último acceso (ultimo_login)
+	• Generación de JWT
+Respuesta estándar:
+{
+  "access_token": "TOKEN",
+  "token_type": "bearer"
+}
+
+3.2 Validación de Estado de Cuenta
+Se implementó control de acceso basado en el campo:
+	• id_estado_cuenta
+Valores:
+	• 1 → activo
+	• 2 → suspendido
+	• 3 → eliminado
+Regla aplicada:
+Solo usuarios con estado activo pueden iniciar sesión.
+
+3.3 Actualización de Último Login
+Cada vez que un usuario inicia sesión:
+	• Se actualiza el campo ultimo_login
+	• Permite trazabilidad y auditoría
+
+3.4 Función get_current_user
+Se utiliza como dependencia de FastAPI para:
+	• Extraer el token del header Authorization
+	• Validar el JWT
+	• Obtener el user_id
+	• Consultar el usuario en base de datos
+	• Retornar el usuario autenticado
+
+3.5 Endpoint GET /me
+Ruta:
+GET /me
+Protección:
+Requiere JWT válido
+Funcionalidad:
+	• Devuelve los datos del usuario autenticado
+	• Utiliza Depends(get_current_user)
+	• Usa schema para evitar exponer datos sensibles
+Ejemplo de respuesta:
+{
+  "id_usuario": 1,
+  "nombre": "Juan Pérez",
+  "email": "juan@gmail.com",
+  "foto_perfil_url": null,
+  "fecha_registro": "2026-03-29T10:30:00",
+  "ultimo_login": "2026-03-29T12:00:00"
+}
+
+3.6 Endpoint GET /protected
+Ruta:
+GET /protected
+Protección:
+Requiere JWT válido
+Funcionalidad:
+	• Endpoint de prueba para validar autenticación
+	• Confirma que el sistema de seguridad funciona correctamente
+Ejemplo de respuesta:
+{
+  "message": "Acceso permitido",
+  "user_id": 1
+}
+
+4. Seguridad Implementada
+Durante esta fase se aplicaron las siguientes medidas:
+	• Hash de contraseñas con bcrypt
+	• Uso de JWT firmado con clave secreta
+	• Expiración de tokens
+	• Validación en cada request
+	• Uso de headers Authorization (Bearer Token)
+	• Ocultamiento de datos sensibles mediante schemas
+	• Validación de estado de cuenta
+	• No uso de sesiones en servidor
+
+5. Uso de Schemas (Pydantic)
+Se utilizaron schemas para:
+	• Validar datos de entrada (LoginRequest)
+	• Controlar datos de salida (UserResponse)
+	• Evitar exponer campos sensibles como:
+		○ password_hash
+
+6. Estructura del Código
+La implementación respeta la arquitectura modular:
+app/
+├── api/
+│   ├── auth.py        # Login
+│   ├── user.py        # /me
+│   ├── protected.py   # Endpoint de prueba
+│
+├── models/
+│   └── user.py
+│
+├── schemas/
+│   ├── user.py
+│   └── auth.py
+│
+├── core/
+│   └── security.py
+│
+└── db.py
+
+7. Flujo Completo
+Registro
+App → POST /users → Backend → Base de datos
+Login
+App → POST /login → Backend → JWT
+Uso del sistema
+App → Request con token → Backend valida → Acceso permitido
+
+8. Pruebas Realizadas
+Se validaron los siguientes escenarios:
+	• Login con credenciales correctas
+	• Login con credenciales incorrectas (401)
+	• Login con usuario suspendido (403)
+	• Acceso a /me con token válido
+	• Acceso a /protected con y sin token
+
+9. Resultado Final
+El sistema actualmente permite:
+	• Autenticación segura con JWT
+	• Protección de endpoints
+	• Obtención de usuario autenticado
+	• Control de acceso por estado de cuenta
+	• Registro de actividad de usuarios
+
+10. Conclusión
+La fase de autenticación ha sido completada exitosamente, dejando un backend:
+	• Seguro
+	• Escalable
+	• Modular
+	• Preparado para producción
+Esta base permite avanzar a la siguiente etapa del sistema, enfocada en la gestión de dispositivos (macetas inteligentes) y lógica de negocio principal.
+
+
+🪴 Documentación – Implementación de Registro de Macetas (Dispositivos IoT)
+Proyecto: Tonalkab
+
+1. Introducción
+En esta fase se implementó el sistema de registro de macetas inteligentes dentro del backend del proyecto Tonalkab.
+El objetivo es permitir que cada usuario pueda registrar dispositivos físicos (ESP32), asignándoles un identificador único y un token de autenticación independiente del sistema de usuarios.
+Este diseño sigue buenas prácticas utilizadas en sistemas IoT modernos, separando claramente la autenticación de usuarios y dispositivos.
+
+2. Concepto de Autenticación de Dispositivos
+A diferencia de los usuarios, que utilizan JWT con expiración, los dispositivos utilizan un token propio con las siguientes características:
+• Generado por el backend
+• Entregado una única vez
+• Almacenado de forma segura (hash)
+• No expira (persistente)
+• Usado por el ESP32 para autenticarse
+Este enfoque permite comunicación segura y continua sin necesidad de reautenticación frecuente.
+
+3. Arquitectura del Flujo
+El flujo implementado es el siguiente:
+Usuario autenticado (JWT)
+↓
+POST /macetas
+↓
+Backend genera token
+↓
+Se guarda el hash en la base de datos
+↓
+Se retorna el token en texto plano (una sola vez)
+↓
+App envía token al ESP32 (Bluetooth)
+↓
+ESP32 guarda token en memoria (NVS)
+↓
+ESP32 usa el token para comunicarse con el backend
+
+4. Modelo de Base de Datos
+Se implementó la entidad Maceta, que representa un dispositivo físico.
+Campos principales:
+• id_maceta → identificador único
+• id_usuario → usuario propietario
+• nombre_maceta → nombre asignado por el usuario
+• token_hash → hash del token del dispositivo
+• id_tipo_planta → tipo de planta asociado
+• id_estado_dispositivo → estado del dispositivo (2 = desconectado)
+• fecha_registro → fecha de creación
+• created_at / updated_at → control de auditoría
+Relaciones:
+• FK → Usuario
+• FK → TipoPlanta
+
+5. Generación y Seguridad del Token
+Se implementaron funciones de seguridad para dispositivos:
+Generación
+Se utiliza:
+secrets.token_urlsafe(32)
+Esto genera un token:
+• Largo
+• Aleatorio
+• Difícil de predecir
+
+Hash del token
+El token se almacena de forma segura mediante:
+hashlib.sha256(token.encode()).hexdigest()
+Características:
+• No reversible
+• Seguro para almacenamiento
+• Similar al manejo de contraseñas
+
+Regla de seguridad clave
+El token:
+• ❌ NO se guarda en texto plano
+• ❌ NO se puede recuperar
+• ✅ SOLO se muestra una vez al crear la maceta
+
+6. Endpoint Implementado
+📌 POST /macetas
+Permite registrar una nueva maceta.
+
+🔐 Requiere autenticación
+Se utiliza:
+Depends(get_current_user)
+
+📥 Request
+{
+  "nombre_maceta": "Maceta Sala",
+  "id_tipo_planta": 1
+}
+
+⚙️ Lógica interna
+	1. Generación de token seguro
+	2. Hash del token
+	3. Validación de tipo de planta (FK)
+	4. Creación del registro en la base de datos
+	5. Guardado del hash
+	6. Retorno del token plano
+
+📤 Response
+{
+  "id_maceta": 2,
+  "token": "TOKEN_UNICO"
+}
+
+7. Validación de Integridad (Foreign Keys)
+Se implementó control de integridad mediante claves foráneas:
+• No se puede registrar una maceta con un tipo de planta inexistente
+• MySQL lanza error si la relación no es válida
+Esto asegura consistencia de datos.
+
+8. Problemas Técnicos Resueltos
+Durante esta fase se resolvieron múltiples problemas:
+8.1 Dependencia de Base de Datos (get_db)
+• Se implementó la función get_db para manejo de sesiones
+• Permite inyección automática de la base de datos en FastAPI
+
+8.2 Errores de importación
+• Corrección de rutas de importación
+• Separación entre models y api
+• Uso correcto de routers
+
+8.3 Creación automática de tablas
+• Uso de Base.metadata.create_all()
+• Importación obligatoria de modelos para registro en SQLAlchemy
+
+8.4 Error de Foreign Key
+• Se detectó que no existían registros en tipo_planta
+• Se resolvió insertando datos iniciales
+
+9. Estado Actual del Sistema
+El sistema actualmente permite:
+• Registro de macetas asociado a un usuario
+• Generación de token seguro por dispositivo
+• Almacenamiento seguro del token (hash)
+• Validación de relaciones en base de datos
+• Protección del endpoint mediante JWT
+
+10. Buenas Prácticas Aplicadas
+• Separación de autenticación usuario vs dispositivo
+• Uso de hashing para credenciales
+• Uso de tokens seguros
+• Validación de integridad referencial
+• Arquitectura modular (models, schemas, api)
+• Inyección de dependencias con FastAPI
+• Uso de ORM (SQLAlchemy)
+
+11. Preparación para Siguientes Fases
+Esta implementación deja preparado el sistema para:
+• Autenticación de dispositivos (get_current_device)
+• Recepción de datos del ESP32
+• Endpoints como:
+• POST /devices/auth
+• POST /lecturas
+• POST /riego
+
+12. Conclusión
+La implementación del registro de macetas establece una base sólida para el sistema IoT de Tonalkab, permitiendo identificar y autenticar dispositivos de forma segura e independiente.
+El sistema queda preparado para escalar hacia comunicación en tiempo real, análisis de datos y automatización inteligente del riego.
+
+
+🪴 Documentación Técnica: Integración de Dispositivos IoT – Proyecto Tonalkab
+1. Resumen del Sistema
+Se ha implementado el núcleo de comunicación entre el hardware (ESP32) y el backend (FastAPI). El sistema permite la identificación única de cada dispositivo, la validación de seguridad mediante hashing y la persistencia histórica de lecturas de sensores en una base de datos MySQL.
+
+2. Arquitectura de Seguridad (Dispositivos)
+El sistema utiliza un esquema de autenticación stateless diseñado para entornos IoT, separando la identidad del usuario de la del hardware.
+	• Generación de Tokens: Al registrar una maceta, el backend genera un token de seguridad único (API Key) mediante secrets.token_urlsafe.
+	• Almacenamiento Seguro (Hashing): El token plano nunca se almacena. El servidor calcula un hash SHA-256 y lo guarda en la base de datos.
+	• Validación en Tiempo Real: En cada petición, el dispositivo envía su token plano en el encabezado X-Device-Token. El backend vuelve a hashear este valor y lo compara con el registro en la base de datos para autorizar el acceso.
+
+3. Especificación de la API IoT (api/device.py)
+Se han desplegado endpoints específicos para la operación del hardware, protegidos por la dependencia de seguridad get_current_device.
+A. Endpoint de Autenticación (POST /devices/auth)
+	• Propósito: Permite al ESP32 validar sus credenciales al iniciar su ciclo de vida o tras una reconexión.
+	• Respuesta: Confirma la identidad del dispositivo devolviendo su id_maceta y nombre asignado.
+B. Endpoint de Telemetría (POST /devices/lecturas)
+	• Propósito: Recibir y procesar los datos capturados por los sensores del dispositivo.
+	• Carga Útil (JSON): Soporta múltiples dimensiones de datos según la entidad LecturaSensores.
+		○ humedad_suelo: Porcentaje de humedad en la tierra.
+		○ humedad_ambiental: Porcentaje de humedad en el aire.
+		○ temperatura: Grados Celsius.
+		○ nivel_luz: Intensidad lumínica (lux).
+		○ nivel_agua: Nivel del depósito de riego.
+		○ voltaje_bateria: Estado energético del dispositivo.
+
+4. Persistencia y Modelado de Datos
+La integración garantiza que cada dato enviado por el hardware se convierta en un registro histórico inmutable en MySQL.
+Modelo de Base de Datos (models/lectura.py)
+Se definió la clase LecturaSensores utilizando SQLAlchemy, estableciendo una relación de llave foránea con la tabla macetas. Esto permite vincular cada medición con su dispositivo de origen de forma exacta.
+Validación de Datos (schemas/device.py)
+Utilizando Pydantic, se implementó el esquema LecturaCreate, que actúa como filtro de calidad. Asegura que los datos recibidos tengan el tipo de dato correcto (float, int, bool) antes de permitir su inserción en el motor de base de datos.
+
+5. Integración de Firmware (ESP32)
+El dispositivo ha sido programado para operar bajo un protocolo de comunicación estándar HTTP/1.1:
+	1. Conectividad: Gestión de conexión a redes Wi-Fi locales.
+	2. Preparación de Cabeceras: Inserción del X-Device-Token y Content-Type: application/json.
+	3. Envío de Payload: Serialización de los datos de los sensores en un objeto JSON compatible con el backend.
+	4. Manejo de Respuestas: Interpretación de códigos de estado (200 OK para éxito, 401 para errores de token).
+
+6. Estado Actual de la Fase
+	• ✅ Autenticación Hardware: Funcional y validada mediante hashing SHA-256.
+	• ✅ Integridad Referencial: Las lecturas se asocian correctamente a macetas y tipos de plantas existentes.
+	• ✅ Persistencia: Primera inserción exitosa de datos de sensores confirmada en base de datos.
+	• ✅ Sincronización: Los nombres de variables se han unificado entre el firmware, el backend y el esquema de base de datos (humedad_suelo, humedad_ambiental, etc.) para mantener la coherencia total del proyecto.
+
+
+📶 Documentación Técnica: Monitoreo de Conexión (Heartbeat)
+1. Introducción
+Esta fase establece un mecanismo de "Latido" (Heartbeat) entre el hardware (ESP32) y el backend. El objetivo es registrar los parámetros de red del dispositivo y determinar su estado de disponibilidad en tiempo real, permitiendo a la aplicación móvil informar si una maceta está conectada o desconectada.
+2. Estructura de Datos (Modelo: ConexionDispositivo)
+Se implementó la entidad principal para gestionar la persistencia de los datos de red.
+
+Atributo	Tipo	Descripción
+id_conexion	INT (PK)	Identificador único del registro.
+id_maceta	INT (FK)	Relación con la tabla macetas.
+ssid	VARCHAR	Nombre de la red Wi-Fi a la que está unido el ESP32.
+rssi	INT	Intensidad de la señal (dBm). Indica la calidad de conexión.
+ip_dispositivo	VARCHAR	Dirección IP local asignada al hardware.
+estado_conexion	VARCHAR	Estado reportado por el dispositivo (ej: "conectado").
+ultima_conexion	DATETIME	Timestamp de la última comunicación recibida (UTC).
+3. Lógica de Autenticación y Seguridad
+	• Hardware: El endpoint de reporte está protegido por el header X-Device-Token. El backend valida el token plano contra el hash almacenado en la base de datos antes de actualizar la red.
+	• Usuario: La consulta desde la App móvil requiere un JWT válido y el backend verifica que el id_usuario sea el propietario de la maceta solicitada.
+4. Endpoints Implementados
+A. Reporte de Red (POST /devices/conexion)
+	• Actor: ESP32 (Hardware).
+	• Función: Actualiza los parámetros de red (ssid, rssi, ip).
+	• Efecto secundario: Cambia el id_estado_dispositivo de la maceta a 1 (activo) en la tabla de catálogo.
+B. Consulta de Estado (GET /macetas/{id_maceta}/conexion)
+	• Actor: App Móvil.
+	• Lógica de Desconexión: * El servidor calcula la diferencia entre la hora actual y ultima_conexion.
+		○ Si el tiempo es > 5 minutos, el campo estado_real se marca como "desconectado".
+		○ Se actualiza automáticamente el estado en la tabla macetas a 2 (desconectado).
+5. Integración con el Hardware (ESP32)
+El firmware fue actualizado para realizar peticiones HTTP/HTTPS periódicas:
+	• Heartbeat: Se configuró un temporizador (ej: cada 2 minutos) para reportar la salud de la red sin necesidad de enviar lecturas de sensores.
+	• RSSI Dinámico: El dispositivo utiliza la función WiFi.RSSI() para enviar la potencia de señal real, permitiendo diagnosticar problemas de cobertura.
+6. Resultados y Validación
+	• Persistencia: Los datos se almacenan correctamente en la base de datos MySQL dentro del contenedor Docker.
+	• Visibilidad: El usuario puede visualizar el tiempo exacto de desconexión en caso de falla eléctrica o pérdida de señal Wi-Fi.
+Escalabilidad: El diseño permite soportar múltiples dispositivos por usuario manteniendo un historial de red independiente para cada uno.
+
+
+ Documentación Técnica: Inteligencia Botánica (TipoPlanta)1. IntroducciónEsta fase consistió en transformar la entidad TipoPlanta de un simple registro de nombres a una estructura de datos técnica y científica. Esta información es el "cerebro" que permite al backend de Tonalkab tomar decisiones de riego automatizadas y alimentar los modelos de Machine Learning e IA.2. Entidad Principal: TipoPlantaSe expandió el modelo para incluir parámetros ambientales críticos y dependencias con tablas catálogo.AtributoDominioDescripciónid_tipo_plantaINT (PK)Identificador único del tipo de planta.nombre_plantaVARCHARNombre común de la especie.humedad_suelo_min/maxDECIMALRango óptimo de humedad en tierra (%).humedad_ambiente_min/maxDECIMALRango óptimo de humedad en el aire (%).temperatura_min/maxDECIMALRango de temperatura ideal (°C).tiempo_min_entre_riegosINTDías mínimos recomendados entre riegos.profundidad_raiz_cmINTLongitud de la raíz para cálculo de riego.nivel_dificultadINTEscala de cuidado (1: Fácil, 2: Medio, 3: Difícil).3. Nuevas Tablas Catálogo (Normalización)Para garantizar la integridad referencial y facilitar el análisis de datos, se crearon 5 tablas catálogo que clasifican las necesidades de las plantas:🌞 SensibilidadLuz: Define los niveles de iluminación requeridos (Baja, Media, Alta, Muy Alta).💧 ToleranciaExcesoAgua: Indica la resistencia de la planta ante encharcamientos (Baja, Media, Alta).🌱 TipoPlantaCategoria: Clasifica según el entorno de desarrollo (Interior, Exterior, Ambas).🪨 TipoSuelo: Define el sustrato recomendado (Arenoso, Arcilloso, Mixto).💦 ConsumoAgua: Nivel de demanda hídrica de la especie (Bajo, Medio, Alto).4. Implementación Técnica y ReseteoDebido a que las tablas originales tenían datos y relaciones activas, se aplicó un procedimiento de mantenimiento seguro:Gestión de Restricciones: Se desactivó temporalmente la revisión de llaves foráneas (SET FOREIGN_KEY_CHECKS = 0) para permitir el borrado de las tablas macetas, lectura_sensores, conexion_dispositivo y tipo_planta sin errores de integridad.Persistencia: Se utilizó SQLAlchemy (Base.metadata.create_all) para recrear automáticamente la estructura con las nuevas columnas y relaciones tras reiniciar los contenedores de Docker.Data Seeding: Se poblaron los catálogos con valores estandarizados (ej: 1=Bajo, 2=Medio, 3=Alto) para servir como base a los registros de plantas reales.5. Impacto en el SistemaRiego Inteligente: El sistema ahora puede comparar en tiempo real la humedad_suelo capturada por el ESP32  contra los límites min/max de la planta.Machine Learning: Atributos como tolerancia_exceso_agua y profundidad_raiz actúan como variables predictivas para los modelos de salud vegetal (EstadoPlantaIA).Experiencia de Usuario: La aplicación móvil podrá mostrar fichas técnicas completas incluyendo origen_geografico, historia y cuidados_generales.
+
+
+2. Definición de Modelos de Datos (SQLAlchemy)
+Se estructuraron cinco nuevas entidades en la base de datos para soportar la lógica de control y el entrenamiento futuro de modelos de Machine Learning.
+
+A. Control de Riego (control_riego)
+Registra cada evento de riego con su contexto ambiental. Es la fuente de datos principal para calcular la eficiencia del riego.
+
+Campos clave: humedad_antes, humedad_despues, cantidad_agua_ml, duracion_bomba, id_tipo_activacion (Manual, Automático o IA).
+
+B. Configuración de Maceta (configuracion_maceta)
+Permite al usuario o al sistema establecer reglas específicas que sobrepasan la biología estándar de la planta.
+
+Campos clave: humedad_suelo_min, humedad_suelo_max, tiempo_min_entre_riegos_dias, modo_operacion.
+
+C. Predicciones de Machine Learning (predicciones_ml)
+Repositorio para las inferencias generadas por modelos de IA.
+
+Campos clave: tipo_prediccion (ej. dosis_riego), valor_predicho, confianza_modelo, version_modelo.
+
+D. Catálogos de Soporte
+tipo_activacion: Define el origen del riego (Botón físico, sensor crítico o forzado por IA).
+
+estado_registro: Monitorea el éxito o fallo de la transacción de riego.
+
+3. Endpoints de la API (FastAPI)
+Se desarrollaron los puntos de entrada para la comunicación de alta eficiencia con los dispositivos.
+
+GET /devices/config
+Propósito: Entrega al hardware su "hoja de ruta" operativa.
+
+Lógica interna: Realiza un cruce de datos (Join) entre la biología de la planta, las preferencias del usuario y la última dosis calculada por la IA.
+
+Respuesta: Un objeto JSON que incluye umbrales de humedad, dosis en mililitros y el tiempo transcurrido desde el último riego exitoso.
+
+POST /devices/riego
+Propósito: Recibir el reporte final después de que la maceta ejecuta un riego.
+
+Lógica interna: Calcula el incremento real de humedad y la cantidad de agua utilizada (basada en el flujo de la bomba). Almacena estos datos para cerrar el ciclo de retroalimentación de los modelos de datos.
+
+4. Lógica de Negocio e Inteligencia Vegetal
+Se estableció un motor de decisiones híbrido basado en tres pilares:
+
+Humedad Crítica: Prioridad absoluta. Si el suelo baja del mínimo biológico, se activa el riego independientemente del tiempo transcurrido.
+
+Ciclo de Tiempo (Timeout): Si se cumple el tiempo de espera configurado, el sistema evalúa la humedad. Si no es óptima (pero no crítica), se aplica un riego de mantenimiento.
+
+Dosis Dinámica (ML Injection): La cantidad de agua no es fija; el backend inyecta en el objeto de configuración una dosis calculada por IA, optimizando el recurso hídrico según el histórico de la planta.
+
+5. Seguridad y Autenticación
+Se mantiene el esquema de seguridad de doble vía:
+
+JWT (JSON Web Tokens): Para la gestión de usuarios y acceso desde la plataforma móvil.
+
+API Keys con Hashing (SHA-256): Para los dispositivos. El servidor valida tokens planos enviados por el hardware comparándolos con el hash almacenado en la base de datos, garantizando que el acceso al /config sea exclusivo para dispositivos registrados.
+
+
+Esta es la documentación técnica de la fase de Control de Riego Inteligente y Arquitectura Edge que hemos desarrollado en esta sesión. Este documento resume la reingeniería del backend para convertir a Tonalkab en un sistema resiliente y preparado para Ciencia de Datos.
+
+🛰️ 1. Filosofía de Diseño: Edge Computing
+La principal evolución de esta sesión fue cambiar la mentalidad de "Servidor manda orden" a "Servidor manda reglas".
+
+Autonomía del Hardware: El ESP32 ya no es un esclavo que espera una señal. Ahora descarga su configuración y puede cuidar la planta aunque el Wi-Fi falle.
+
+Resiliencia Biológica: Al guardar los umbrales en su memoria local, el dispositivo garantiza que la planta nunca baje de su humedad crítica.
+
+Servidor como Orquestador: El backend se encarga del procesamiento pesado (Machine Learning) y de la gestión biológica, entregando resultados digeridos al hardware.
+
+🗄️ 2. Arquitectura de Datos (Modelos SQLAlchemy)
+Para soportar esta inteligencia, expandimos la base de datos con modelos diseñados para el entrenamiento de modelos predictivos:
+
+ControlRiego: El "diario de vida" de la maceta. Registra el antes y después de cada riego, la duración exacta y el contexto ambiental (luz/temperatura). Esto es vital para que la IA aprenda cuánta humedad se gana por cada mililitro de agua.
+
+ConfiguracionMaceta: Permite la personalización. Separa los límites biológicos (de la planta) de los límites deseados por el usuario.
+
+PrediccionesML: Una tabla puente donde tus scripts de Ciencia de Datos insertarán las dosis calculadas para que el ESP32 las recoja.
+
+Catálogos de Soporte: Implementamos TipoActivacion (Manual, Automático, IA) y EstadoRegistro para tener trazabilidad total de lo que ocurre físicamente en la maceta.
+
+🔌 3. Capa de Comunicación (Endpoints FastAPI)
+Desarrollamos el "puente de inteligencia" entre la nube y el suelo:
+
+GET /devices/config
+Es el endpoint más crítico. Realiza una jerarquía lógica para decidir qué enviarle al dispositivo:
+
+Prioridad 1: Si el usuario configuró umbrales manuales, los envía.
+
+Prioridad 2 (Fallback): Si no hay manuales, consulta la tabla TipoPlanta y envía los datos científicos de la especie.
+
+Inyección de ML: Busca la última predicción de dosis de agua disponible y se la entrega al ESP32 como un parámetro de ejecución.
+
+POST /devices/riego
+El punto de retroalimentación. Cuando la maceta termina de regar, informa al servidor. Esto cierra el ciclo de datos, permitiendo comparar si la dosis enviada logró el objetivo de humedad deseado.
+
+🧠 4. Lógica de Control Híbrida (Pensada para el Hardware)
+Aunque el código reside en el hardware, la lógica fue diseñada en el backend bajo tres reglas:
+
+Riego por Humedad Crítica: Si baja del mínimo biológico, se riega sí o sí.
+
+Riego por Tiempo de Espera (Timeout): Si ya pasaron los días de descanso de la planta y la tierra no está en su punto óptimo, se aplica un riego de mantenimiento.
+
+Detección de Eventos Externos (Lluvia): El sistema está preparado para identificar aumentos de humedad no provocados por la bomba, evitando sobre-riego y ahorrando agua.
+
+
+Esta es la documentación técnica de la fase de Control de Riego Inteligente y Arquitectura Edge que hemos desarrollado en esta sesión. Este documento resume la reingeniería del backend para convertir a Tonalkab en un sistema resiliente y preparado para Ciencia de Datos.
+
+🛰️ 1. Filosofía de Diseño: Edge Computing
+La principal evolución de esta sesión fue cambiar la mentalidad de "Servidor manda orden" a "Servidor manda reglas".
+	• Autonomía del Hardware: El ESP32 ya no es un esclavo que espera una señal. Ahora descarga su configuración y puede cuidar la planta aunque el Wi-Fi falle.
+	• Resiliencia Biológica: Al guardar los umbrales en su memoria local, el dispositivo garantiza que la planta nunca baje de su humedad crítica.
+	• Servidor como Orquestador: El backend se encarga del procesamiento pesado (Machine Learning) y de la gestión biológica, entregando resultados digeridos al hardware.
+
+🗄️ 2. Arquitectura de Datos (Modelos SQLAlchemy)
+Para soportar esta inteligencia, expandimos la base de datos con modelos diseñados para el entrenamiento de modelos predictivos:
+	• ControlRiego: El "diario de vida" de la maceta. Registra el antes y después de cada riego, la duración exacta y el contexto ambiental (luz/temperatura). Esto es vital para que la IA aprenda cuánta humedad se gana por cada mililitro de agua.
+	• ConfiguracionMaceta: Permite la personalización. Separa los límites biológicos (de la planta) de los límites deseados por el usuario.
+	• PrediccionesML: Una tabla puente donde tus scripts de Ciencia de Datos insertarán las dosis calculadas para que el ESP32 las recoja.
+	• Catálogos de Soporte: Implementamos TipoActivacion (Manual, Automático, IA) y EstadoRegistro para tener trazabilidad total de lo que ocurre físicamente en la maceta.
+
+🔌 3. Capa de Comunicación (Endpoints FastAPI)
+Desarrollamos el "puente de inteligencia" entre la nube y el suelo:
+GET /devices/config
+Es el endpoint más crítico. Realiza una jerarquía lógica para decidir qué enviarle al dispositivo:
+	1. Prioridad 1: Si el usuario configuró umbrales manuales, los envía.
+	2. Prioridad 2 (Fallback): Si no hay manuales, consulta la tabla TipoPlanta y envía los datos científicos de la especie.
+	3. Inyección de ML: Busca la última predicción de dosis de agua disponible y se la entrega al ESP32 como un parámetro de ejecución.
+POST /devices/riego
+El punto de retroalimentación. Cuando la maceta termina de regar, informa al servidor. Esto cierra el ciclo de datos, permitiendo comparar si la dosis enviada logró el objetivo de humedad deseado.
+
+🧠 4. Lógica de Control Híbrida (Pensada para el Hardware)
+Aunque el código reside en el hardware, la lógica fue diseñada en el backend bajo tres reglas:
+	1. Riego por Humedad Crítica: Si baja del mínimo biológico, se riega sí o sí.
+	2. Riego por Tiempo de Espera (Timeout): Si ya pasaron los días de descanso de la planta y la tierra no está en su punto óptimo, se aplica un riego de mantenimiento.
+	3. Detección de Eventos Externos (Lluvia): El sistema está preparado para identificar aumentos de humedad no provocados por la bomba, evitando sobre-riego y ahorrando agua.
+
+
+📱 1. Control Bidireccional (App Móvil -> Backend -> Edge)
+Se implementó la capacidad de que el usuario final interactúe y modifique el comportamiento autónomo del hardware a través de la aplicación móvil, sin comprometer la independencia del dispositivo (Edge Computing).
+	• Cambio de Planta (PATCH /macetas/{id}/planta): Permite reasignar el tipo de planta de una maceta. Al hacerlo, el sistema desactiva cualquier configuración manual previa y la maceta hereda automáticamente los nuevos umbrales biológicos del catálogo botánico.
+	• Configuración Manual (POST /macetas/{id}/configuracion): Permite al usuario forzar rangos de humedad y tiempos de espera personalizados, sobreescribiendo la biología natural de la planta.
+🗃️ 2. Versionado de Datos para Machine Learning
+Una decisión arquitectónica clave implementada en la tabla configuracion_maceta fue el uso del Versionado de Datos (Append-Only / Soft-Delete) en lugar de la sobreescritura (UPDATE).
+	• ¿Cómo funciona? Cada vez que el usuario cambia la configuración, no se borra la anterior. Se crea un nuevo registro y el anterior se marca como inactivo (activa = 0). El dispositivo Edge siempre descarga el registro donde activa = 1.
+	• Impacto en Data Science: Esto preserva el contexto histórico. Los modelos de IA futuros podrán analizar cómo evolucionó la salud de la planta en correlación con los cambios de configuración que hizo el usuario a lo largo de los meses.
+🌧️ 3. Algoritmo "Valle a Pico" (Detección de Lluvia y Percolación)
+Se desarrolló un algoritmo avanzado de detección de anomalías en el endpoint de telemetría (POST /devices/lecturas) para identificar eventos de riego externos (lluvia o riego manual con jarra).
+	• El Reto: El agua tarda minutos en filtrarse en el sustrato (tasa de percolación), por lo que comparar solo la lectura actual con la anterior oculta el aumento real de humedad.
+	• La Solución (Ventanas de Tiempo): El algoritmo analiza una ventana de los últimos 15 minutos. Busca el punto de humedad más bajo (Valle) y lo compara con el actual (Pico). Si el incremento (Delta) es superior al 8% y no hay registro de que la bomba se haya encendido, se clasifica como una anomalía hídrica.
+	• Manejo de Tormentas: El algoritmo incluye una validación "anti-rebote" que agrupa las lecturas continuas de lluvia en un solo registro de evento.
+🤖 4. Generación de un Dataset Limpio
+Gracias al algoritmo anterior, la tabla control_riego registra los eventos de lluvia asignándoles el id_tipo_activacion = 4.
+Esto garantiza que tu dataset de entrenamiento esté limpio. Cuando se entrene a la Inteligencia Artificial para calcular cuánta humedad genera un mililitro de agua expedido por la bomba (duracion_bomba > 0), el modelo podrá excluir matemáticamente los eventos de lluvia (tipo_activacion = 4), evitando sesgos y correlaciones falsas en las redes neuronales.
+
+Documentación Técnica: Algoritmo de  (Valle a Pico)
+Descripción General El algoritmo de "Valle a Pico" es un mecanismo de detección de anomalías hídricas ejecutado en el backend. Su propósito es identificar aumentos de humedad en la tierra que no fueron provocados por el sistema de riego autónomo (por ejemplo, lluvia o riego manual), aislar estos eventos para proteger el modelo de Machine Learning y evitar el desperdicio de agua en el siguiente ciclo del hardware.
+
+1. El Problema a Resolver (Tasa de Percolación)
+El agua no penetra la tierra de forma instantánea. Si llueve, la humedad del sustrato sube gradualmente a lo largo de varios minutos. Un sistema básico que solo compara la "lectura actual" contra la "lectura del minuto anterior" fallaría en detectar la tormenta, ya que los incrementos minuto a minuto son muy pequeños (ej. 1% o 2%).
+Para resolver esto, el algoritmo no analiza puntos aislados, sino Ventanas de Tiempo.
+
+2. División de Responsabilidades (Edge vs. Nube)
+Para mantener la eficiencia y la separación de capas en la arquitectura de Tonalkab, el proceso se divide estrictamente:
+	• El ESP32 (Hardware - Testigo Ciego): No realiza ningún cálculo relacionado con el clima. Su única responsabilidad es leer los sensores físicos con la frecuencia establecida y enviar los datos "crudos" al servidor. No sabe si el agua que detecta es de lluvia o de su propia bomba.
+	• El Servidor (Backend - Cerebro Analítico): Recibe los datos crudos, revisa el historial reciente de la base de datos, ejecuta las comparaciones matemáticas de la ventana de tiempo y emite un veredicto. Si detecta lluvia, manipula la base de datos para registrar el evento.
+
+3. Lógica del Algoritmo Paso a Paso
+El algoritmo se ejecuta en el endpoint de telemetría (POST /devices/lecturas) cada vez que el ESP32 envía un nuevo dato.
+	1. Definición de la Ventana: El servidor retrocede 15 minutos en el tiempo desde el momento actual.
+	2. Búsqueda del "Valle": Consulta en la base de datos cuál fue el nivel de humedad más bajo registrado dentro de esos 15 minutos.
+	3. Cálculo del "Pico": Calcula la diferencia (Delta) restando el Valle a la lectura de humedad recién recibida.
+	4. Cruce de Umbral: Evalúa si el Delta es superior al 8%. (Este umbral indica que la tierra recibió una cantidad significativa de agua).
+	5. Descarte de Falsos Positivos: Si el Delta es mayor al 8%, el servidor verifica la tabla control_riego. Si descubre que la bomba de agua del dispositivo se encendió en esos mismos 15 minutos, ignora el evento (fue un riego normal). Si la bomba no se encendió, se confirma la anomalía: es lluvia.
+	6. Sistema Anti-Rebote: Para evitar que una tormenta continua genere decenas de registros duplicados por cada lectura nueva que llega, el servidor verifica si ya registró un evento de lluvia en los últimos 15 minutos. Si ya existe, simplemente actualiza o ignora; si no existe, crea un único registro oficial.
+
+4. Impacto en el Sistema (Cierre del Ciclo)
+La detección exitosa de lluvia desencadena dos acciones críticas en la plataforma:
+	• Ahorro Hídrico Inmediato: Al crear el registro de "Lluvia Exitosa", el reloj interno del servidor se reinicia. Al día siguiente, cuando el ESP32 descargue sus reglas operativas, verá que han pasado "0 días" desde el último riego y cancelará cualquier orden de encender la bomba, ahorrando el agua del tanque.
+	• Limpieza del Dataset: Al etiquetar este evento explícitamente como "Lluvia" (id_tipo_activacion = 4), los futuros algoritmos de Machine Learning podrán filtrar esta fila. Esto evita que la Inteligencia Artificial asuma erróneamente que la maceta ganó 20% de humedad sin haber gastado ni un mililitro de agua de la bomba.
+
+
+Documentación Técnica: Sistema de Gestión Edge y Resiliencia Hídrica
+1. Gestión Autónoma de Conectividad (Heartbeat Activo)
+Se implementó un sistema de monitoreo de salud del hardware (Health Check) en el servidor para garantizar que el estado de los dispositivos en la base de datos sea verídico sin depender de la interacción del usuario.
+	• Componente: app/core/tasks.py y app/main.py.
+	• Lógica de Operación: * El servidor ejecuta una tarea asíncrona en segundo plano cada 2 minutos.
+		○ Se definió un umbral de tolerancia de 5 minutos.
+		○ Si una maceta no envía datos en ese lapso, el sistema marca automáticamente la conexión como desconectada y cambia el estado global de la maceta a inactivo.
+	• Beneficio: Elimina falsos positivos de "dispositivo en línea" y permite generar alertas de mantenimiento si un sensor pierde energía o señal Wi-Fi.
+
+2. Algoritmo "Valle a Pico" de Doble Capa
+Se evolucionó la detección de lluvia para capturar no solo eventos climáticos drásticos, sino también precipitaciones ligeras y prolongadas (lloviznas) que afectan la humedad del suelo.
+	• Componente: app/api/device.py (Endpoint /lecturas).
+	• Capas de Análisis:
+		1. Ventana Rápida (15 min): Detecta incrementos repentinos superiores al 8%. Ideal para aguaceros o riego manual con jarra.
+		2. Ventana Lenta (60 min): Detecta incrementos acumulados superiores al 12%. Diseñado para lloviznas que saturan el suelo gradualmente pero que el radar de 15 minutos podría ignorar.
+	• Filtro de Falsos Positivos: El sistema cruza el incremento de humedad con el estado de la bomba. Si hubo aumento de humedad pero la bomba estuvo apagada, se registra oficialmente como "Evento de Lluvia" (id_tipo_activacion = 4).
+	• Beneficio: Ahorro hídrico al evitar riegos innecesarios tras una lluvia y garantiza que el dataset para Machine Learning no contenga ruido (incrementos de humedad "fantasma").
+
+3. Arquitectura de Configuración Híbrida (Edge Computing)
+Se optimizó el intercambio de reglas operativas para que el ESP32 sea capaz de tomar decisiones locales sin consultar al servidor en cada segundo.
+	• Flujo de Datos: El dispositivo descarga mediante GET /config un paquete JSON que contiene:
+		○ Umbrales Biológicos: Humedad mínima y máxima según el tipo de planta o configuración manual.
+		○ Dosis Dinámica: La cantidad de mililitros a regar, calculada por el modelo de IA o por reglas de negocio.
+		○ Calibración de Hardware: El flujo real de la bomba (ml/s).
+	• Beneficio: Autonomía del hardware. Si el Wi-Fi falla, el ESP32 ya conoce sus límites y puede seguir operando de forma segura.
+
+4. Herramientas de Validación (Simulador ESP32)
+Para garantizar la integridad de la integración Hardware-Software, se desarrolló un firmware de simulación interactiva.
+	• Capacidades:
+		○ Simulación de Eventos: Permite disparar manualmente estados de "Humedad Baja" y "Salto de Humedad (Lluvia)" para observar la respuesta del backend en tiempo real.
+		○ Auditoría de Transacciones: Valida que cada reporte de riego genere el descuento correcto en los cálculos de agua y actualice los registros históricos de la planta.
+Uso en Pruebas: Permite estresar el sistema y validar la base de datos sin necesidad de mojar sensores físicos durante la etapa de desarrollo de software.
+
+📑 Documentación de Nuevos Endpoints - API Tonalkab
+🔐 1. Autenticación y Seguridad
+Todos los endpoints listados a continuación (excepto los de catálogos generales) requieren un token de acceso válido.
+
+Header Obligatorio: Authorization: Bearer <JWT_TOKEN>
+
+Formato de Respuesta: JSON (UTF-8)
+
+🪴 2. Módulo de Macetas
+Este endpoint permite a la aplicación obtener la lista de dispositivos vinculados exclusivamente al usuario autenticado.
+
+GET /macetas/
+Descripción: Recupera todas las macetas registradas por el usuario, incluyendo su estado actual de conexión.
+
+Dependencia: get_current_user
+
+Respuesta Exitosa (200 OK):
+
+JSON
+[
+  {
+    "id_maceta": 1,
+    "nombre_maceta": "Aloe Vera Sala",
+    "id_tipo_planta": 2,
+    "id_estado_dispositivo": 1,
+    "fecha_registro": "2026-04-12T10:00:00"
+  }
+]
+🌿 3. Módulo de Catálogos (Botánica)
+Endpoints para alimentar los selectores (dropdowns) en el registro de nuevas plantas. Estos endpoints son de solo lectura.
+
+GET /catalogos/plantas
+Descripción: Lista completa de especies disponibles con sus umbrales biológicos.
+
+Estructura de Respuesta:
+
+id_tipo_planta: ID único para el registro de la maceta.
+
+nombre_planta: Nombre común de la especie.
+
+humedad_suelo_min / max: Rangos críticos para el riego.
+
+nivel_dificultad: Escala numérica de cuidado.
+
+GET /catalogos/luz
+Descripción: Niveles de sensibilidad lumínica (Baja, Media, Alta, Muy Alta).
+
+Formato: {"id": int, "valor": string}
+
+GET /catalogos/suelos
+Descripción: Tipos de sustratos soportados (Arenoso, Arcilloso, Mixto).
+
+GET /catalogos/consumo-agua
+Descripción: Clasificación de necesidad hídrica (Bajo, Medio, Alto).
+
+🏗️ 4. Estructura de Datos (Schemas)
+Para mantener la integridad del sistema, se han definido los siguientes esquemas en Pydantic:
+
+TipoPlantaResponse
+Define la ficha técnica de una especie. Es vital para que la App móvil pueda mostrar recomendaciones de cuidado antes de que el usuario elija la planta.
+
+CatalogoBase
+Un formato estandarizado para tablas maestras que facilita el mapeo de IDs en los componentes del frontend (React Native).
+
+🚀 5. Instrucciones para el Frontend
+Sincronización: Se recomienda cachear los resultados de /catalogos/plantas al iniciar la aplicación para reducir el tráfico, ya que estos datos cambian con poca frecuencia.
+
+Validación: Antes de enviar un POST para registrar una maceta, la App debe asegurarse de que el id_tipo_planta existe en el catálogo obtenido previamente.
+
+Estado en Tiempo Real: El campo id_estado_dispositivo en el listado de macetas debe usarse para mostrar visualmente si el hardware está en línea (1 = Conectado, 2 = Desconectado).
+
+📑 Documentación Técnica: Sistema de Alertas Reactivas
+
+### 1. Filosofía del Diseño: "Monitorización sin Ruido"
+
+El objetivo principal de este módulo es notificar al usuario sobre condiciones críticas (humedad, batería, agua) garantizando la limpieza de la base de datos. Se implementó una lógica de **Anti-Spam** que evita la duplicidad de alertas: si una condición crítica persiste, el sistema solo mantiene una alerta activa hasta que el usuario la marque como "vista" o se resuelva el problema.
+
+### 2. Arquitectura de Datos (Modelos SQLAlchemy)
+
+Se implementaron las entidades siguiendo la estructura de normalización definida en el diccionario de datos:
+
+- **Entidad Alerta**: Almacena el mensaje, la maceta origen, el timestamp y los estados de visualización.
+    
+- **Catálogo TipoAlerta**: Clasifica los eventos en: `baja_humedad` (1), `bateria_baja` (2), `desconexion` (3) y `nivel_agua_bajo` (4).
+    
+- **Catálogo PrioridadAlerta**: Define la urgencia como `baja` (1), `media` (2) o `alta` (3).
+    
+- **Catálogo EstadoAlerta**: Gestiona el ciclo de vida de la notificación: `pendiente` (1), `vista` (2) o `resuelta` (3).
+    
+
+### 3. Lógica de Gatillos (Triggers) en Telemetría
+
+La detección de alertas se integró directamente en el flujo de recepción de datos del hardware (`POST /devices/lecturas`). El sistema realiza las siguientes comparaciones en cada reporte del ESP32:
+
+|**Variable**|**Condición de Disparo**|**Prioridad**|
+|---|---|---|
+|**Humedad del Suelo**|Menor al umbral mínimo biológico o manual configurado.|Alta (3)|
+|**Voltaje de Batería**|Valor inferior a 3.3V (Límite crítico de operación).|Media (2)|
+|**Nivel de Agua**|Depósito por debajo del 10% de su capacidad.|Alta (3)|
+
+### 4. Interfaz de Programación (API)
+
+Se expusieron endpoints específicos para la interacción con la aplicación móvil en React Native:
+
+- **`GET /macetas/{id}/alertas`**: Permite a la App obtener las notificaciones activas. Soporta el parámetro `solo_pendientes` para optimizar el tráfico de red.
+    
+- **`PATCH /alertas/{id}/vista`**: Endpoint de confirmación. Cambia el estado de la alerta y la marca como leída por el usuario, permitiendo que el sistema pueda generar una nueva alerta si la condición crítica se repite en el futuro.
+    
+
+---
+
+### 5. Impacto en el Desarrollo
+
+Con esta implementación, **Tonalkab** ahora cumple con los requisitos de un sistema robusto de monitorización:
+
+1. **Protección Biológica**: El usuario es notificado antes de que la planta sufra daños permanentes.
+    
+2. **Mantenimiento Preventivo**: Las alertas de batería y agua aseguran que el hardware no deje de funcionar por falta de recursos físicos.
+    
+3. **Dataset Optimizado**: Las alertas quedan vinculadas a las lecturas, permitiendo que en el futuro tu modelo de Machine Learning analice la correlación entre las alertas ignoradas y el estado de salud de la planta.
+
+
+🎨 Documentación Técnica: Sistema de Personalización y Gamificación (Skins)Proyecto: TonalkabMódulo: Backend (FastAPI, SQLAlchemy, MySQL, Docker)1. IntroducciónEsta fase del desarrollo implementó un sistema completo de personalización visual (Skins) para la plataforma Tonalkab. El objetivo principal es mejorar la experiencia de usuario (UX) en la aplicación móvil desarrollada en React Native, permitiendo a los usuarios personalizar tanto su propio avatar (perfil) como la representación visual de cada una de sus macetas inteligentes.  El diseño se basó en una arquitectura de inventario desbloqueable y un sistema de Starter Pack automático, garantizando que las identidades visuales del usuario y del hardware operen de manera independiente.2. Arquitectura de Archivos Estáticos y VolúmenesPara servir los recursos visuales (imágenes .png, .jpg) sin comprometer el rendimiento de la base de datos ni depender de servicios en la nube costosos en esta etapa, se implementó un servidor de estáticos embebido en FastAPI.Estructura de Directorios: Se creó el directorio físico app/assets/skins/ dentro del código fuente.Resolución de Rutas Dinámicas: Para solucionar la barrera de lectura entre el sistema operativo host (Windows 11) y el contenedor de Docker (Debian), se implementó la resolución absoluta de rutas mediante os.path.dirname(os.path.abspath(__file__)). Esto garantiza que FastAPI localice la carpeta assets dinámicamente, independientemente del entorno de despliegue.Montaje (Mounting): Se utilizó la clase StaticFiles de FastAPI montada en la ruta /assets, permitiendo que cualquier imagen sea accesible globalmente vía HTTP (ej. [https://api.tonalkab.com/assets/skins/default.png](https://api.tonalkab.com/assets/skins/default.png)).  3. Modelo de Datos Relacional (SQLAlchemy)Se expandió el esquema de la base de datos MySQL para soportar el catálogo de skins y la lógica de pertenencia mediante tres nuevas tablas:  A. Entidad Catálogo: SkinTabla maestra que almacena todos los diseños disponibles en el juego/plataforma.Campos clave: id (PK), nombre, descripcion, imagen_url (ruta relativa al backend), es_premium (booleano para futuras integraciones de monetización o recompensas).B. Tablas Puente (Inventarios): UsuarioSkin y MacetaSkinPara permitir que usuarios y macetas tengan aspectos diferentes, se crearon dos tablas de relación Muchos-a-Muchos con atributos adicionales.Estructura Base: Ambas utilizan llaves primarias compuestas (id_usuario/id_skin y id_maceta/id_skin).  Mecanismo de "Skin Activa": Se incluyó un campo booleano equipado. La regla de negocio dicta que, por cada usuario o maceta, solo puede haber un registro con equipado = True.Propiedades Dinámicas (Lazy Loading): En el modelo Maceta, se implementó el decorador @property def skin_activa(self) que itera sobre la relación y devuelve automáticamente el objeto Skin completo que se encuentre actualmente equipado, optimizando las consultas.  4. Esquemas y Serialización Segura (Pydantic)Se actualizaron los esquemas de transferencia de datos para alimentar directamente al frontend sin requerir peticiones adicionales.  Inyección en Tiempo de Ejecución: El esquema MacetaResponse ahora incluye el campo skin_activa: Optional[SkinBase]. Al consultar el listado del dashboard, la App móvil recibe inmediatamente la URL de la imagen a renderizar.Protección del Token de Hardware: Para evitar exponer credenciales, se mantuvo el token de seguridad del ESP32 fuera de los listados generales (MacetaResponse). Se creó un esquema heredado estricto llamado MacetaCreateResponse que inyecta el token plano de forma efímera únicamente en el microsegundo en que la maceta es registrada por primera vez.  5. Lógica de Negocios y Endpoints5.1. El "Starter Pack" (Automatización de Onboarding)Se intervinieron los procesos de creación (POST /users y POST /macetas/) para eliminar la fricción inicial:  Al completarse el registro y hacer flush() en la base de datos, el sistema captura el ID recién generado.Automáticamente se inserta un registro en la tabla de inventario correspondiente asociando la skin "Botánica Clásica" (ID = 1).El campo equipado se marca como True de inmediato.Resultado: Ningún usuario o maceta enfrenta estados nulos (null) en su interfaz gráfica al ser creados.5.2. Catálogo e InventarioGET /skins/: Devuelve la tienda completa. De acceso público pero estructurado para soportar filtros premium.GET /usuarios/me/skins: Devuelve el inventario privado del usuario autenticado (cruzando el token JWT con la tabla usuarios_skins).  5.3. Sistema de Equipamiento (Switching)Se desarrollaron dos endpoints de modificación de estado:POST /usuarios/me/skins/{id_skin}/equiparPOST /macetas/{id_maceta}/skins/{id_skin}/equiparFlujo de validación estricto implementado:Autorización: Verifica que la maceta pertenezca al usuario del JWT.  Propiedad del Item: Consulta si el usuario tiene la skin bloqueada o desbloqueada en usuarios_skins. Si no la posee, arroja HTTP 403 Forbidden.Registro Lógico: Verifica si la maceta ya tenía esa skin en su historial (macetas_skins). Si no, crea la relación.Limpieza Transaccional: Ejecuta un UPDATE masivo que establece equipado = False en todas las skins de esa maceta/usuario, y posteriormente establece equipado = True solo en la solicitada, garantizando consistencia mediante un único db.commit().6. Resolución de Problemas Técnicos (Troubleshooting Histórico)Durante la implementación se resolvieron los siguientes conflictos arquitectónicos:Error 404 Not Found en Assets: Docker Compose en Windows aislaba el volumen. Se corrigió implementando rutas relativas a __file__ en Python, eliminando la necesidad de montar volúmenes externos y permitiendo que Docker copie la carpeta durante la fase de build.Crasheo de Mappers SQLAlchemy: Al definir relaciones bidireccionales (back_populates), el sistema arrojó error 500 (InvalidRequestError) por asimetría de propiedades. Se resolvió completando explícitamente el relationship("Skin") en las tres tablas involucradas para permitir la inicialización en cascada del ORM.7. Instrucciones para el Frontend (Mobile Team)Carga de Imágenes: Las rutas entregadas en imagen_url son relativas (ej. /assets/skins/default.png). El frontend debe concatenar estas rutas con la URL base de la API para su correcto renderizado (ej. <Image source="{{" uri: baseURL + maceta.skin_activa.imagen_url }}/>).Dashboard: No es necesario consultar las skins por separado. El endpoint GET /macetas/ ya incluye el árbol completo de datos estéticos.
+
+
+
+🧠 Documentación Técnica: Inyección de Machine Learning y Estabilización de Entorno (Docker)
+Proyecto: Tonalkab
+
+1. Resumen de la Fase
+En esta fase se logró el hito de convertir a Tonalkab de un sistema de monitoreo reactivo a un sistema inteligente y predictivo. Se integró exitosamente un modelo de Machine Learning (Random Forest Regressor) en el backend para predecir dosis milimétricas de riego, resolviendo simultáneamente problemas críticos de compatibilidad de binarios en el contenedor de despliegue.
+
+2. Arquitectura de Inferencia Asíncrona (FastAPI BackgroundTasks)
+Para garantizar que la inyección de Inteligencia Artificial no penalizara los tiempos de respuesta (latencia) del hardware ESP32, se implementó un patrón de diseño de Ejecución en Segundo Plano.
+
+Punto de Disparo (Gatillo): La IA se invoca dentro del endpoint de telemetría (POST /devices/lecturas).
+
+Mecanismo: Se inyectó el módulo BackgroundTasks de FastAPI. Cuando el ESP32 reporta sus sensores, el servidor le responde inmediatamente con un 200 OK ("Lectura guardada"). Inmediatamente después y de forma silenciosa, el servidor arranca el proceso matemático pesado para predecir el futuro.
+
+Beneficio: Evita cuellos de botella en la red y asegura que el hardware vuelva a dormir o a ejecutar sus rutinas locales lo más rápido posible.
+
+3. Módulo de Inferencia (app/ml/inference.py)
+Se creó un nuevo módulo dedicado exclusivamente a interactuar con el modelo predictivo.
+
+Carga del Cerebro: El sistema utiliza la librería joblib para cargar en memoria el archivo pre-entrenado modelo_riego_tonalkab.pkl.
+
+Contextualización: El script consulta la tabla LecturaSensores para obtener el estado actual de la maceta y cruza este dato con los umbrales biológicos definidos en ConfiguracionMaceta o TipoPlanta para calcular el Delta de humedad requerido.
+
+Persistencia: La predicción final (en mililitros) se guarda automáticamente en la tabla predicciones_ml con el identificador dosis_riego, quedando a la espera de ser consumida por el hardware.
+
+4. Cierre del Ciclo Edge Computing
+La predicción calculada por la nube se entrega al ESP32 a través del endpoint operativo:
+
+Ruta: GET /devices/config
+
+Lógica de Entrega: El endpoint busca la predicción más reciente (y con una confianza_modelo superior al 80%) y la empaqueta en la variable dosis_ml_calculada.
+
+Calibración Física: Se definió la variable flujo_bomba_ml_por_segundo = 15.0 (configurable), la cual actúa como el "traductor" entre el volumen líquido calculado por la IA (ml) y el tiempo físico que el ESP32 debe encender su relé (milisegundos).
+
+5. Estabilización del Entorno de Producción (Resolución de Bugs)
+Durante la inyección de las librerías de Data Science (pandas, scikit-learn, joblib), el contenedor Docker colapsó impidiendo el arranque de uvicorn.
+
+🛑 El Problema (C-API Incompatibility):
+
+Error: ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+
+Causa Raíz: Las dependencias instalaron automáticamente la última versión disponible de la librería matemática numpy (v2.0+). Esta nueva versión principal cambió drásticamente su arquitectura en C, rompiendo la compatibilidad interna con la versión de pandas (2.1.0) que el sistema utilizaba.
+
+✅ La Solución (Dependency Pinning):
+Se aplicó un parche estricto en el archivo docker/requirements.txt para congelar (pinning) la versión matemática a la última rama estable de la generación 1.x.
+
+Configuración Final y Segura:
+
+Plaintext
+pandas==2.1.0
+scikit-learn==1.3.0
+joblib==1.3.2
+numpy==1.26.4
+Tras reconstruir el contenedor (docker compose up -d --build), el problema de binarios quedó resuelto permanentemente, garantizando la estabilidad del entorno de FastAPI tanto en desarrollo (Windows) como en producción (Debian VPS).
+
+
+# 📖 Documentación Técnica: Asistente Inteligente "Tonalli" (Ecosistema Tonalkab)
+
+## 1. Visión General y Arquitectura
+
+Tonalli es el núcleo de Inteligencia Artificial de Tonalkab, diseñado para transformar la experiencia de jardinería inteligente (Smart Landscaping). No opera como un simple chatbot de preguntas y respuestas, sino como un **Agente RAG (Retrieval-Augmented Generation) Bidireccional** capaz de leer la telemetría del sistema y ejecutar acciones físicas sobre el hardware.
+
+**Stack Tecnológico Integrado:**
+
+- **Framework API:** FastAPI (Python 3.11)
+    
+- **Modelo Fundacional:** `gemini-2.5-flash` (Google GenAI SDK)
+    
+- **Base de Datos:** MySQL 8.0 (vía SQLAlchemy ORM)
+    
+- **Despliegue:** Docker y Docker Compose (Entorno de desarrollo local Windows 11, Producción en servidor Debian).
+    
+
+**Capacidades Principales:**
+
+1. **Conciencia de Contexto:** Acceso en tiempo real a sensores (humedad, temperatura, luz) y estado de red (RSSI).
+    
+2. **Multimodalidad:** Procesamiento de imágenes (Base64) para cruzar diagnósticos visuales con datos de telemetría.
+    
+3. **Control Físico:** Capacidad para alterar la base de datos y forzar la activación del relé de la bomba en el ESP32.
+    
+4. **Memoria de Sesión:** Soporte para historial de chat interactivo gestionado desde la aplicación móvil.
+    
+
+---
+
+## 2. Configuración e Instalación
+
+Para habilitar las capacidades de IA sin causar conflictos de compatibilidad binaria en el contenedor, se utiliza la librería moderna y oficial de Google.
+
+**Dependencia (`requirements.txt`):**
+
+Plaintext
+
+```
+google-genai
+```
+
+**Variables de Entorno (`.env`):** Tanto en el entorno local como en el VPS, se requiere la llave de acceso proporcionada por Google AI Studio para autenticar las peticiones:
+
+Fragmento de código
+
+```
+GEMINI_API_KEY="AIzaSy..."
+```
+
+---
+
+## 3. Arquitectura de Herramientas (Tool Calling)
+
+Tonalli no "adivina" los datos. Se le proveen dos herramientas (funciones en Python) ubicadas en `app/services/ai_bot.py` que conectan el razonamiento de la IA con la infraestructura del sistema.
+
+### Herramienta A: `consultar_mis_plantas` (Modo Lectura)
+
+Extrae una radiografía completa de la infraestructura IoT y biológica del usuario.
+
+- **Métricas Biológicas:** Cruza la última `LecturaSensores` con los umbrales ideales en `TipoPlanta`.
+    
+- **Salud IoT:** Consulta `ConexionDispositivo` para alertar si la señal WiFi (RSSI) del microcontrolador es débil (ej. menor a -80 dBm).
+    
+- **Cálculo de Ahorro Hídrico:** Compara el gasto real acumulado en la tabla `ControlRiego` de los últimos 30 días contra el gasto teórico de un temporizador clásico (ej. 150ml/día), demostrando el ROI ecológico del modelo predictivo.
+    
+
+### Herramienta B: `forzar_riego_fisico` (Modo Escritura)
+
+Permite a la IA interactuar con el hardware físico.
+
+- **Mecanismo:** La IA llama a esta función con `id_maceta` y `mililitros`. La función busca la `ConfiguracionMaceta` activa, cambia el `modo_operacion` a `"manual"` y asigna la `dosis_ml_calculada`. El ESP32, en su próximo ciclo de telemetría, detectará este flag y activará la bomba.
+    
+
+---
+
+## 4. Seguridad y Endpoints (`app/api/bot.py`)
+
+La ruta `/bot/chat` es el puente entre la app móvil y el modelo. Su diseño prioriza la seguridad y la resiliencia del servidor.
+
+**1. Blindaje de Datos (Closures):** Para evitar ataques de inyección de prompts donde un usuario intente acceder a datos de otra cuenta, las herramientas se envuelven en funciones anónimas dentro del endpoint, inyectando el `current_user.id_usuario` validado por el Token JWT.
+
+**2. Resiliencia de Inicialización:** El cliente `genai.Client` se instancia exclusivamente dentro del bloque de ejecución de la ruta. Esto garantiza que si la `GEMINI_API_KEY` falla o se omite en el servidor, el contenedor de FastAPI no colapsará durante el arranque, aislando el fallo únicamente a la ruta del bot.
+
+**3. Soporte de Historial e Imágenes:** El esquema `BotChatRequest` procesa una lista estructurada de objetos `ChatMessage` para mantener la fluidez conversacional y decodifica imágenes en `Base64` directamente a bytes para su análisis multimodal.
+
+---
+
+## 5. Ingeniería del Prompt Central (System Instruction)
+
+El comportamiento de Tonalli se rige por un marco de reglas estrictas. Este prompt no solo define su tono, sino que le otorga gatillos de comportamiento para diferentes escenarios:
+
+- **Prevención de Alucinaciones:** Tiene prohibido inventar datos de sensores y jamás debe accionar la bomba de agua sin una orden directa y explícita del usuario.
+    
+- **Diagnóstico Predictivo:** Reglas lógicas para cruzar humedad, temperatura y factores visuales para prevenir estrés hídrico o plagas.
+    
+- **El Protocolo "Pitch" (Evaluación Técnica):** Un modo oculto diseñado para certámenes de innovación tecnológica. Al pedirle a la IA que se presente o explique el proyecto, asume un perfil de ingeniería de élite. En este modo, Tonalli explica proactivamente:
+    
+    - La arquitectura distribuida (FastAPI, MySQL, Docker).
+        
+    - El funcionamiento del motor de inferencias en Scikit-Learn (Random Forest) para sustituir a los temporizadores estáticos.
+        
+    - El diseño híbrido de generación de bioenergía mediante la oxidación de metales, destacando la autonomía energética del sistema frente a un jurado.
+        
+    - Su capacidad de simulación climática, explicando cómo ajusta dosis a micro-riegos automáticos frente a eventos de temperatura extrema (evapotranspiración acelerada).
+        
+
+---
+
+## 6. Flujo de Trabajo y Casos de Uso (Frontend a Backend)
+
+1. **Consulta de Mantenimiento:**
+    
+    - _Usuario:_ "Haz un escaneo de salud completo."
+        
+    - _Flujo:_ App envía el texto -> FastAPI inyecta credenciales -> Gemini invoca `consultar_mis_plantas` -> Lee MySQL -> Gemini genera resumen alertando sobre nivel de batería y señal WiFi.
+        
+2. **Multimodalidad:**
+    
+    - _Usuario:_ (Sube foto de hoja amarilla) "¿Qué le pasa a la Menta del patio?"
+        
+    - _Flujo:_ App convierte a Base64 -> FastAPI decodifica -> Gemini analiza imagen y cruza con lecturas de la base de datos para diagnosticar posible clorosis o exceso de riego.
+        
+3. **Control de Hardware en Vivo:**
+    
+    - _Usuario:_ "Riega la maceta de la sala con 20ml."
+        
+    - _Flujo:_ Gemini detecta la orden directa -> Invoca `forzar_riego_fisico` -> Actualiza MySQL -> ESP32 reacciona -> Gemini confirma ejecución.
+
+
+📖 Documentación Técnica: Sistema de Riego Adaptativo y Resiliencia Edge (Tonalkab)
+🎯 Resumen Ejecutivo
+Se ha implementado una arquitectura de doble capa (Nube + Edge) para la gestión del riego automatizado. El sistema ahora utiliza un modelo de Machine Learning (Random Forest) que aprende la capacidad de absorción específica de cada sustrato basándose en su historial. Además, se ha dotado al microcontrolador ESP32 de una lógica de Edge Computing que garantiza la autonomía de la maceta incluso frente a caídas prolongadas de la red WiFi.
+
+🧠 1. Machine Learning: Aprendizaje por Historial y Cold Start
+El algoritmo ya no solo reacciona a variables climáticas, sino que comprende la física del suelo de cada usuario.
+
+Problema resuelto (Cold Start): Para evitar que el sistema sea ineficiente el día 1, se desarrolló un simulador que genera un dataset inicial con diferentes perfiles de sustrato (arcillosos, arenosos, mixtos) afectados por el clima.
+
+Nueva Variable (Feature Engineering): Se introdujo la tasa_absorcion_historica. El modelo ahora entiende cuántos mililitros de agua le toma históricamente a esa maceta en específico subir un 1% su nivel de humedad.
+
+Archivo Implementado: app/ml/train_model.py (Script de generación de datos sintéticos y entrenamiento de Scikit-Learn que exporta el archivo .pkl v2).
+
+⚙️ 2. Motor de Inferencia en Backend (FastAPI)
+El servidor ahora procesa y digiere los datos transaccionales antes de consultar a la Inteligencia Artificial.
+
+Cálculo Dinámico: Antes de predecir la dosis, el backend consulta la tabla ControlRiego. Extrae los últimos 5 riegos exitosos de la maceta y calcula la media matemática de su eficiencia real (mililitros_inyectados / porcentaje_incrementado).
+
+Precisión Quirúrgica: El modelo predice la dosis exacta en mililitros basándose en el delta necesario (Humedad Objetivo - Humedad Actual), evitando el desperdicio de agua y, por ende, optimizando la energía de la biobatería y panel solar.
+
+Archivo Implementado: app/ml/inference.py (Actualizado para procesar 5 variables de entrada hacia el Random Forest).
+
+📡 3. API y Comunicación con el Hardware (IoT)
+La API se ha modificado para que el servidor no solo reciba datos, sino que configure al microcontrolador para actuar de forma autónoma.
+
+Transmisión de Inteligencia: El endpoint GET /devices/config calcula la Tasa de Absorción Histórica y se la envía al ESP32 en el objeto JSON bajo la llave tasa_absorcion_ml_por_porcentaje.
+
+Evaluación de Anomalías (Lluvia): El endpoint de recepción de lecturas (POST /devices/lecturas) evalúa ventanas de tiempo (15 y 60 minutos). Si detecta un incremento de humedad sin que la bomba se haya encendido, registra un evento de lluvia para no desfasar el modelo de IA.
+
+Asincronía: El entrenamiento y la inferencia se envían a hilos secundarios (BackgroundTasks) para no bloquear la respuesta HTTP al microcontrolador.
+
+Archivos Implementados: * app/schemas/device.py (Validación con Pydantic del nuevo parámetro).
+
+app/api/device.py (Endpoints refactorizados con cálculos históricos).
+
+🔌 4. Especificaciones para el Firmware (ESP32 en C++)
+Para que esta arquitectura se complete, el equipo de hardware debe implementar la siguiente lógica en el ESP32:
+
+Persistencia de Datos: Al consumir el endpoint /config, el ESP32 debe extraer el valor tasa_absorcion_ml_por_porcentaje y guardarlo en la memoria no volátil (se recomienda usar la librería <Preferences.h>).
+
+Modo Offline (Resiliencia): Si WiFi.status() != WL_CONNECTED y los sensores indican humedad baja, el ESP32 debe ejecutar el riego utilizando la matemática guardada en memoria:
+
+Fórmula: ml_necesarios = (humedad_max - humedad_actual) * tasa_guardada
+
+Traducción a Hardware: tiempo_bomba_segundos = ml_necesarios / 15.0 (suponiendo un flujo de 15ml/s).
+
+Retraso de Lectura (Delay de Absorción): Tras ejecutar un riego físico, el hardware debe esperar aproximadamente 10 a 15 minutos antes de tomar la lectura final y hacer el POST /devices/riego. Esto garantiza que el agua haya bajado al sensor y los datos de retroalimentación para la IA sean correctos.
+
+💡 Puntos Clave para la Defensa del Proyecto
+Eficiencia Computacional: Al pasar la "regla de tres" al hardware para el modo offline, se reduce la carga computacional en el ESP32, ahorrando batería.
+
+Escalabilidad: El uso de BackgroundTasks en FastAPI permite que un solo servidor VPS maneje miles de macetas sin colapsar.
+
+Sostenibilidad: El cruce de variables ambientales con el perfil del sustrato asegura que Tonalkab utilice exactamente la cantidad de agua y energía de bombeo estrictamente necesarias, haciendo viable el modelo de energía híbrida por oxidación de metales.
+
+
+Esta es la documentación técnica integral de la infraestructura y el backend del proyecto Tonalkab. Este documento consolida las configuraciones de seguridad, el despliegue de contenedores y la lógica de negocio implementada hasta la fecha (abril de 2026).🛡️ 1. Hardening y Seguridad del Servidor (Debian 13)Se ha priorizado la reducción de la superficie de ataque del VPS para garantizar un entorno de producción profesional.  Acceso y AdministraciónUsuario del Sistema: Se creó el usuario tonalkab con privilegios sudo para eliminar el uso de la cuenta root en tareas cotidianas.  Seguridad SSH:Puerto: Se cambió el puerto estándar 22 al 2022 para mitigar ataques de fuerza bruta automatizados.Acceso Root: Deshabilitado mediante la directiva PermitRootLogin no.Autenticación: Configurada para permitir llaves públicas (PubkeyAuthentication yes).Firewall (UFW): Configurado bajo una política de "Denegar por defecto" (default deny incoming).  Puertos autorizados: 2022 (SSH), 80 (HTTP) y 443 (HTTPS).Blindaje de Docker (Anti-Bypass)Se instaló y configuró la herramienta ufw-docker para corregir la vulnerabilidad nativa de Docker donde este manipula iptables saltándose las reglas de UFW. Con esto, los contenedores son invisibles al internet público a menos que se autoricen explícitamente en el firewall.  🚀 2. Arquitectura de Despliegue (Docker)El sistema opera bajo una arquitectura contenerizada para garantizar portabilidad y aislamiento.  Servicios Definidos (docker-compose.yml)Backend (FastAPI):Imagen: Basada en python:3.11-slim para minimizar vulnerabilidades.  Configuración: Se define el PYTHONPATH=/app para el reconocimiento correcto de módulos.  Red: Mapeado únicamente a 127.0.0.1:8000 para que solo Nginx pueda comunicarse con él.  Base de Datos (MySQL 8.0):Persistencia: Utiliza un volumen db_data para resguardar la información ante reinicios.  Aislamiento: No expone puertos al exterior; solo es accesible por el backend a través de la red interna tonalkab_net.  Healthcheck: Configurado para que el backend espere a que el motor InnoDB esté listo antes de intentar la conexión.  🌐 3. Proxy Inverso y Cifrado (Nginx & SSL)Nginx actúa como el único punto de entrada público, gestionando el tráfico hacia el subdominio api.tonalkab.com.  Configuración: Actúa como Reverse Proxy redirigiendo el tráfico del puerto 443 al puerto interno 8000 del backend.  HTTPS: Implementado con Certbot (Let's Encrypt).  Redirección automática de HTTP a HTTPS habilitada.Renovación automática de certificados configurada.🧠 4. Lógica de Backend y Base de DatosEl sistema cuenta con un diseño modular enfocado en la recolección de datos y el análisis de inteligencia botánica.  Autenticación HíbridaUsuarios: Implementación de JWT (JSON Web Tokens) con expiración para sesiones en la App móvil.  Google Sign-In: Integrado mediante google-auth para permitir el inicio de sesión con cuentas externas, vinculadas a la tabla auth_providers.  Dispositivos (IoT): Los ESP32 utilizan un Token de Dispositivo (API Key) generado con secrets.token_urlsafe(32) y almacenado mediante un hash SHA-256.  Inteligencia y Monitoreo (Edge Computing)Algoritmo "Valle a Pico": Detecta anomalías hídricas (lluvia o riego manual) analizando ventanas de tiempo de 15 y 60 minutos. Esto evita el riego innecesario y limpia el dataset para futuros modelos de Machine Learning.  Heartbeat: Tarea asíncrona que monitorea la actividad de las macetas cada 2 minutos. Si un dispositivo supera los 5 minutos sin reportar, se marca automáticamente como "Desconectado".  📂 5. Directorio de Rutas y RecursosComponenteRuta en Servidor / ProyectoFunciónRepositorio~/tonalkab-backendCarpeta raíz del código fuente.Variables Entorno~/tonalkab-backend/.envCredenciales de DB y llaves JWT.  Scripts Backup~/scripts/backup_db.shRespaldo diario de MySQL (3:00 AM).Almacén Backups~/backups/mysql/Histórico de 30 días de bases de datos.Modelos DBapp/models/Estructura de las 16 tablas (usuarios, macetas, sensores, etc.).  Config. Nginx/etc/nginx/sites-available/Reglas del Proxy Inverso para el subdominio.  📝 6. Auditoría de Puertos (Resultados Confirmados)Se realizaron pruebas de conexión desde un entorno externo (Windows 11) con los siguientes resultados finales:Puerto 3306 (MySQL): CERRADO/FILTRADO (Exitoso) - Protegido contra ransomware.Puerto 8000 (Backend): CERRADO/FILTRADO (Exitoso) - Solo accesible vía Nginx.Puerto 2022 (SSH): ABIERTO - Único acceso administrativo.Puerto 443 (HTTPS): ABIERTO - Acceso público seguro a la API.
+        

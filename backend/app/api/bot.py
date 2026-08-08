@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
@@ -13,6 +13,7 @@ from groq import Groq
 from app.db import get_db
 from app.api.auth import get_current_user
 from app.models.user import User
+from app.core.limiter import limiter
 
 # Importamos ambas herramientas
 from app.services.ai_bot import consultar_mis_plantas, forzar_riego_fisico
@@ -32,8 +33,10 @@ class BotChatResponse(BaseModel):
     respuesta: str
 
 @router.post("/chat", response_model=BotChatResponse)
+@limiter.limit("15/minute")
 def chatear_con_bot(
-    request: BotChatRequest,
+    request: Request,
+    payload: BotChatRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -99,16 +102,16 @@ def chatear_con_bot(
             )
 
             history_gemini = []
-            for m in request.historial:
+            for m in payload.historial:
                 history_gemini.append(
                     types.Content(role=m.role, parts=[types.Part.from_text(text=m.content)])
                 )
 
-            contenido_peticion = [request.mensaje]
+            contenido_peticion = [payload.mensaje]
             
-            if request.imagen_base64:
+            if payload.imagen_base64:
                 try:
-                    base64_str = request.imagen_base64
+                    base64_str = payload.imagen_base64
                     if "base64," in base64_str:
                         base64_str = base64_str.split("base64,")[1]
                     base64_str += "=" * ((4 - len(base64_str) % 4) % 4)
@@ -134,20 +137,20 @@ def chatear_con_bot(
             client = Groq(api_key=os.getenv("GROQ_API_KEY"))
             
             messages = [{"role": "system", "content": instrucciones}]
-            for m in request.historial:
+            for m in payload.historial:
                 role = "assistant" if m.role == "model" else "user"
                 messages.append({"role": role, "content": m.content})
 
-            if request.imagen_base64:
+            if payload.imagen_base64:
                 modelo_groq = "llama-3.2-11b-vision-preview"
-                base64_str = request.imagen_base64
+                base64_str = payload.imagen_base64
                 if "base64," in base64_str:
                     base64_str = base64_str.split("base64,")[1]
                 
                 messages.append({
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": request.mensaje},
+                        {"type": "text", "text": payload.mensaje},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_str}"}}
                     ]
                 })
@@ -156,7 +159,7 @@ def chatear_con_bot(
 
             else:
                 modelo_groq = "llama-3.3-70b-specdec"
-                messages.append({"role": "user", "content": request.mensaje})
+                messages.append({"role": "user", "content": payload.mensaje})
 
                 tools_groq = [
                     {
