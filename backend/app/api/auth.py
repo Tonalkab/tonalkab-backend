@@ -45,6 +45,17 @@ def get_current_user(
 
     return user
 
+# 👑 Dependency: Validar permisos de administrador
+def get_current_admin_user(
+    current_user: Usuario = Depends(get_current_user)
+):
+    if not current_user.es_admin:
+        raise HTTPException(
+            status_code=403, 
+            detail="Acceso denegado. Se requieren privilegios de administrador."
+        )
+    return current_user
+
 # 🔑 LOGIN TRADICIONAL (Mejorado con Rate Limiter)
 @router.post("/login")
 @limiter.limit("5/minute")

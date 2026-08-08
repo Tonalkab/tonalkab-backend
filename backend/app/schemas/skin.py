@@ -7,9 +7,18 @@ class SkinBase(BaseModel):
     descripcion: Optional[str] = None
     imagen_url: str
     es_premium: bool
+    precio_monedas: int = 0
 
     class Config:
         from_attributes = True
+
+class SkinTiendaItem(SkinBase):
+    desbloqueada: bool = False
+    en_uso: bool = False
+
+class SkinTiendaResponse(BaseModel):
+    saldo_monedas: int
+    skins: List[SkinTiendaItem]
 
 class UsuarioSkinResponse(BaseModel):
     id_skin: int

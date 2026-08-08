@@ -18,8 +18,10 @@ class UserResponse(BaseModel):
     nombre: str
     email: EmailStr
     foto_perfil_url: Optional[str] = None
+    monedas: int = 100
+    es_admin: bool = False
     ultimo_login: Optional[datetime] = None
     created_at: datetime  # Corresponde a la fecha de registro en tu modelo
 
     class Config:
-        from_attributes = True # Permite que Pydantic lea modelos de SQLAlchemy [cite: 65]
+        from_attributes = True # Permite que Pydantic lea modelos de SQLAlchemy

@@ -2223,5 +2223,162 @@ Escalabilidad: El uso de BackgroundTasks en FastAPI permite que un solo servidor
 Sostenibilidad: El cruce de variables ambientales con el perfil del sustrato asegura que Tonalkab utilice exactamente la cantidad de agua y energía de bombeo estrictamente necesarias, haciendo viable el modelo de energía híbrida por oxidación de metales.
 
 
-Esta es la documentación técnica integral de la infraestructura y el backend del proyecto Tonalkab. Este documento consolida las configuraciones de seguridad, el despliegue de contenedores y la lógica de negocio implementada hasta la fecha (abril de 2026).🛡️ 1. Hardening y Seguridad del Servidor (Debian 13)Se ha priorizado la reducción de la superficie de ataque del VPS para garantizar un entorno de producción profesional.  Acceso y AdministraciónUsuario del Sistema: Se creó el usuario tonalkab con privilegios sudo para eliminar el uso de la cuenta root en tareas cotidianas.  Seguridad SSH:Puerto: Se cambió el puerto estándar 22 al 2022 para mitigar ataques de fuerza bruta automatizados.Acceso Root: Deshabilitado mediante la directiva PermitRootLogin no.Autenticación: Configurada para permitir llaves públicas (PubkeyAuthentication yes).Firewall (UFW): Configurado bajo una política de "Denegar por defecto" (default deny incoming).  Puertos autorizados: 2022 (SSH), 80 (HTTP) y 443 (HTTPS).Blindaje de Docker (Anti-Bypass)Se instaló y configuró la herramienta ufw-docker para corregir la vulnerabilidad nativa de Docker donde este manipula iptables saltándose las reglas de UFW. Con esto, los contenedores son invisibles al internet público a menos que se autoricen explícitamente en el firewall.  🚀 2. Arquitectura de Despliegue (Docker)El sistema opera bajo una arquitectura contenerizada para garantizar portabilidad y aislamiento.  Servicios Definidos (docker-compose.yml)Backend (FastAPI):Imagen: Basada en python:3.11-slim para minimizar vulnerabilidades.  Configuración: Se define el PYTHONPATH=/app para el reconocimiento correcto de módulos.  Red: Mapeado únicamente a 127.0.0.1:8000 para que solo Nginx pueda comunicarse con él.  Base de Datos (MySQL 8.0):Persistencia: Utiliza un volumen db_data para resguardar la información ante reinicios.  Aislamiento: No expone puertos al exterior; solo es accesible por el backend a través de la red interna tonalkab_net.  Healthcheck: Configurado para que el backend espere a que el motor InnoDB esté listo antes de intentar la conexión.  🌐 3. Proxy Inverso y Cifrado (Nginx & SSL)Nginx actúa como el único punto de entrada público, gestionando el tráfico hacia el subdominio api.tonalkab.com.  Configuración: Actúa como Reverse Proxy redirigiendo el tráfico del puerto 443 al puerto interno 8000 del backend.  HTTPS: Implementado con Certbot (Let's Encrypt).  Redirección automática de HTTP a HTTPS habilitada.Renovación automática de certificados configurada.🧠 4. Lógica de Backend y Base de DatosEl sistema cuenta con un diseño modular enfocado en la recolección de datos y el análisis de inteligencia botánica.  Autenticación HíbridaUsuarios: Implementación de JWT (JSON Web Tokens) con expiración para sesiones en la App móvil.  Google Sign-In: Integrado mediante google-auth para permitir el inicio de sesión con cuentas externas, vinculadas a la tabla auth_providers.  Dispositivos (IoT): Los ESP32 utilizan un Token de Dispositivo (API Key) generado con secrets.token_urlsafe(32) y almacenado mediante un hash SHA-256.  Inteligencia y Monitoreo (Edge Computing)Algoritmo "Valle a Pico": Detecta anomalías hídricas (lluvia o riego manual) analizando ventanas de tiempo de 15 y 60 minutos. Esto evita el riego innecesario y limpia el dataset para futuros modelos de Machine Learning.  Heartbeat: Tarea asíncrona que monitorea la actividad de las macetas cada 2 minutos. Si un dispositivo supera los 5 minutos sin reportar, se marca automáticamente como "Desconectado".  📂 5. Directorio de Rutas y RecursosComponenteRuta en Servidor / ProyectoFunciónRepositorio~/tonalkab-backendCarpeta raíz del código fuente.Variables Entorno~/tonalkab-backend/.envCredenciales de DB y llaves JWT.  Scripts Backup~/scripts/backup_db.shRespaldo diario de MySQL (3:00 AM).Almacén Backups~/backups/mysql/Histórico de 30 días de bases de datos.Modelos DBapp/models/Estructura de las 16 tablas (usuarios, macetas, sensores, etc.).  Config. Nginx/etc/nginx/sites-available/Reglas del Proxy Inverso para el subdominio.  📝 6. Auditoría de Puertos (Resultados Confirmados)Se realizaron pruebas de conexión desde un entorno externo (Windows 11) con los siguientes resultados finales:Puerto 3306 (MySQL): CERRADO/FILTRADO (Exitoso) - Protegido contra ransomware.Puerto 8000 (Backend): CERRADO/FILTRADO (Exitoso) - Solo accesible vía Nginx.Puerto 2022 (SSH): ABIERTO - Único acceso administrativo.Puerto 443 (HTTPS): ABIERTO - Acceso público seguro a la API.
-        
+📝 6. Auditoría de Puertos (Resultados Confirmados)
+Se realizaron pruebas de conexión desde un entorno externo (Windows 11) con los siguientes resultados finales:
+- Puerto 3306 (MySQL): CERRADO/FILTRADO (Exitoso) - Protegido contra ransomware.
+- Puerto 8000 (Backend): CERRADO/FILTRADO (Exitoso) - Solo accesible vía Nginx.
+- Puerto 2022 (SSH): ABIERTO - Único acceso administrativo.
+- Puerto 443 (HTTPS): ABIERTO - Acceso público seguro a la API.
+
+
+================================================================================
+🚀 7. Actualización de Arquitectura: Rendimiento, Seguridad, Alembic y Mobile (Agosto 2026)
+================================================================================
+
+🎯 Resumen de la Actualización
+Se aplicó una refactorización integral orientada a la alta disponibilidad, rendimiento en redes celulares, protección de infraestructura frente a abusos y control formal de cambios de base de datos en producción.
+
+---
+
+### 🛡️ A. Resiliencia de Conexiones a Base de Datos (SQLAlchemy Connection Pool)
+- **Problema:** En servidores con MySQL, conexiones inactivas eran cerradas por timeout (`wait_timeout`), arrojando errores "MySQL server has gone away".
+- **Solución implementada (`backend/app/db.py`):**
+  - `pool_size=10`: Mantiene hasta 10 conexiones persistentes listas en memoria.
+  - `max_overflow=20`: Permite picos de hasta 30 conexiones simultáneas sin colapsar.
+  - `pool_recycle=3600`: Renueva conexiones cada hora antes de que MySQL las interrumpa.
+  - `pool_pre_ping=True`: Verifica la salud de la conexión con un "ping" antes de ejecutar consultas.
+
+---
+
+### ⚡ B. Eliminación de Consultas N+1 (Endpoint Unificado de Dashboard)
+- **Problema:** La pantalla principal de la app móvil realizaba 1 petición a `/macetas/`, 1 a `/catalogos/plantas` y N peticiones adicionales a `/macetas/{id}/lecturas/actual`. En un huerto de 5 macetas, esto generaba 7 viajes de red lentos.
+- **Solución implementada (`backend/app/api/maceta.py` y `backend/app/schemas/maceta.py`):**
+  - Nuevo endpoint: `GET /macetas/dashboard`.
+  - Entrega en una sola respuesta JSON consolidada:
+    - Datos generales de la maceta.
+    - Ficha botánica completa de `TipoPlanta` (umbrales ideales).
+    - Última medición registrada en `LecturaSensores`.
+    - Skin activa configurada (`SkinBase`).
+    - Estado de red en tiempo real (`ConexionResponse`), indicando si está conectada o desconectada según el cálculo de inactividad (>5 min).
+- **Impacto Frontend (`tonalkab/src/screens/HomeScreen.js`):** La app móvil ahora carga su pantalla principal en una sola petición HTTP ultrarrápida.
+
+---
+
+### 🛑 C. Rate Limiting y Protección contra Abusos (SlowAPI)
+- **Módulo (`backend/app/core/limiter.py` y `backend/app/main.py`):**
+  - Integración de `slowapi` con limitación basada en IP cliente (`get_remote_address`).
+- **Rutas Protegidas:**
+  - `POST /login` (`backend/app/api/auth.py`): **5 peticiones / minuto** (Mitigación de ataques de fuerza bruta en contraseñas).
+  - `POST /bot/chat` (`backend/app/api/bot.py`): **15 peticiones / minuto** (Protección de cuotas de tokens y costos en Gemini y Groq).
+- **Respuesta:** En caso de superar el umbral, el servidor responde con HTTP `429 Too Many Requests`.
+
+---
+
+### 📊 D. Endurecimiento de Datos de Telemetría (Pydantic Field)
+- **Archivo (`backend/app/schemas/device.py`):**
+  - Se agregaron validaciones de rangos físicos con `Field(ge=..., le=...)`:
+    - Humedad de suelo y ambiental: 0.0% a 100.0%.
+    - Temperatura: -30.0°C a 80.0°C.
+    - Nivel de agua en tanque: 0% a 100%.
+    - Voltaje de biobatería: 0.0V a 15.0V.
+    - Duración de riego por bomba: 0.0s a 300.0s.
+  - Esto previene que sensores ruidosos o corruptos alteren el dataset del modelo de Machine Learning (`RandomForest`).
+
+---
+
+### 🗄️ E. Control de Versiones y Migraciones de Base de Datos (Alembic)
+- **Archivos creados:**
+  - `backend/alembic.ini`: Configuración global de migraciones.
+  - `backend/alembic/env.py`: Conectado a la metadata de todos los modelos SQLAlchemy de `app/models/`.
+  - `backend/alembic/script.py.mako`: Plantilla de revisiones.
+  - `backend/alembic/versions/`: Directorio de historial de versiones.
+
+- **Comandos de Gestión en el Servidor (Debian / Docker):**
+
+```bash
+# 1. Reconstruir contenedor tras cambios en dependencias:
+cd ~/tonalkab-backend
+docker compose up -d --build
+
+# 2. Ver estado actual de migraciones:
+docker compose exec backend alembic current
+
+# 3. Generar una nueva migración automáticamente tras modificar modelos en app/models/:
+docker compose exec backend alembic revision --autogenerate -m "descripcion_del_cambio"
+
+# 4. Aplicar migraciones pendientes a MySQL:
+docker compose exec backend alembic upgrade head
+
+# 5. Revertir la última migración (Rollback):
+docker compose exec backend alembic downgrade -1
+```
+
+---
+
+### 📱 F. Mejoras en la Aplicación Móvil (React Native / Expo)
+- **Diagnóstico Botánico Multimodal con Cámara (`tonalkab/src/screens/TonalliScreen.js`):**
+  - Integración de `expo-image-picker`.
+  - Soporte para tomar fotos desde la cámara nativa o seleccionar imágenes de la galería.
+  - Vista previa de la fotografía adjunta con botón para descartar antes de enviar.
+  - Conversión a Base64 y envío al endpoint `/bot/chat` para análisis visual por IA (Gemini / Groq Vision).
+  - Renderizado de la imagen en la burbuja de conversación del chat.
+- **Robustecimiento del Cliente HTTP (`tonalkab/src/api/client.js`):**
+  - Configuración de `timeout: 15000` (15 segundos) para evitar pantallas congeladas por caídas de red móvil.
+  - Interceptor de respuesta para capturar errores `401 Unauthorized` y limpiar automáticamente las credenciales vencidas de `AsyncStorage`.
+
+---
+
+## 🪙 8. Sistema de Tienda de Skins, Economía de Monedas y Panel de Administración
+
+### 📜 A. Registro de Cambios en Base de Datos (Historial SQL)
+Para control histórico del esquema, las modificaciones aplicadas mediante la migración de Alembic `0001_gamification_admin` corresponden a las siguientes sentencias DDL en MySQL:
+
+```sql
+-- 1. Billetera de Monedas y Rol de Administrador en la tabla 'usuarios'
+ALTER TABLE usuarios 
+ADD COLUMN monedas INT NOT NULL DEFAULT 100 AFTER id_estado_cuenta,
+ADD COLUMN es_admin BOOLEAN NOT NULL DEFAULT FALSE AFTER monedas;
+
+-- 2. Precio en Monedas en la tabla 'skins' (0 = gratis)
+ALTER TABLE skins 
+ADD COLUMN precio_monedas INT NOT NULL DEFAULT 0 AFTER es_premium;
+```
+
+---
+
+### 🎨 B. Tienda de Skins y Desbloqueo Dinámico (`backend/app/api/skins.py`)
+- **`GET /skins/tienda`:**
+  - Entrega el catálogo de skins enriquecido con el balance actual de monedas del usuario autenticado (`saldo_monedas`) y el estado de cada diseño (`desbloqueada: bool`, `en_uso: bool`).
+- **`POST /skins/{id_skin}/comprar`:**
+  - Valida el inventario del usuario (`UsuarioSkin`).
+  - Si la skin es gratuita (`precio_monedas == 0`), se desbloquea directamente.
+  - Si tiene costo (`precio_monedas > 0`), valida que `usuario.monedas >= precio`, descuenta el saldo y añade la skin a `UsuarioSkin`.
+- **`POST /macetas/{id_maceta}/skins/{id_skin}/equipar`:**
+  - Aplica la skin a la maceta seleccionada siempre que el usuario sea propietario de la misma.
+
+---
+
+### 👑 C. Panel de Administración y Subida de Archivos (`backend/app/api/admin.py`)
+- **Dependencia de Seguridad (`backend/app/api/auth.py`):**
+  - `get_current_admin_user`: Intercepta la petición y valida `current_user.es_admin == True`. Rechaza con `403 Forbidden` a usuarios convencionales.
+- **Endpoints Multipart / Form-Data (Sin comandos SQL manuales):**
+  - `POST /admin/skins`: Recibe nombre, descripción, precio en monedas, es_premium y el archivo de imagen binario (`UploadFile`). Guarda físicamente la imagen en `app/assets/skins/` y crea el registro en la tabla `Skin`.
+  - `POST /admin/plantas`: Recibe el formulario botánico completo (nombre, rangos de humedad, temperatura, días de riego, dificultad) y fotografía opcional. Registra en `TipoPlanta`.
+  - `GET /admin/stats`: Proporciona métricas en tiempo real (total de usuarios, macetas registradas, skins y catálogo botánico).
+
+---
+
+### 📱 D. Experiencia en la App Móvil (React Native / Expo)
+- **Boutique & Vestidor (`tonalkab/src/screens/MacetaVestidorScreen.js`):**
+  - Indicador de saldo de monedas `🪙` en el header superior.
+  - Botones con feedback dinámico:
+    - `"✓ En Uso"` (deshabilitado).
+    - `"Aplicar Estilo"` (activo para skins desbloqueadas).
+    - `"🎁 Reclamar Gratis"` (para diseños con costo 0).
+    - `"🪙 Comprar por {precio} Monedas"` (con validación de saldo).
+- **Perfil de Usuario (`tonalkab/src/screens/PerfilScreen.js`):**
+  - Muestra el saldo de monedas del usuario.
+  - Badge `"ADMIN"` y botón exclusivo de acceso directo a `"⚙️ Panel de Gestión"` para administradores.
+- **Panel de Administración Móvil (`tonalkab/src/screens/AdminPanelScreen.js`):**
+  - Interfaz con selector de fotos desde la galería del dispositivo (`expo-image-picker`), formularios con validaciones y panel de métricas globales.
+

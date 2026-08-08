@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from datetime import datetime
 from app.db import Base
 
@@ -12,6 +12,8 @@ class User(Base):
 
     foto_perfil_url = Column(String(255), nullable=True)
     id_estado_cuenta = Column(Integer, nullable=False, default=1)
+    monedas = Column(Integer, nullable=False, default=100)
+    es_admin = Column(Boolean, nullable=False, default=False)
 
     ultimo_login = Column(DateTime, nullable=True)
 

@@ -14,6 +14,7 @@ from app.api import conexion as api_conexion
 from app.api import catalogos
 from app.api import alerta as api_alerta
 from app.api import skins 
+from app.api import admin as api_admin
 
 # Importar modelos para que Base.metadata.create_all los detecte
 from app.models import tipo_planta
@@ -79,6 +80,7 @@ app.include_router(api_conexion.router)
 app.include_router(catalogos.router)
 app.include_router(api_alerta.router)
 app.include_router(skins.router) 
+app.include_router(api_admin.router)
 app.include_router(bot.router)
 
 @app.get("/")
