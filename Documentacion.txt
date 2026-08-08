@@ -2342,6 +2342,10 @@ ADD COLUMN es_admin BOOLEAN NOT NULL DEFAULT FALSE AFTER monedas;
 -- 2. Precio en Monedas en la tabla 'skins' (0 = gratis)
 ALTER TABLE skins 
 ADD COLUMN precio_monedas INT NOT NULL DEFAULT 0 AFTER es_premium;
+
+-- 3. Ampliar columna descripcion en 'skins' a TEXT para permitir descripciones largas
+ALTER TABLE skins 
+MODIFY COLUMN descripcion TEXT NULL;
 ```
 
 ---

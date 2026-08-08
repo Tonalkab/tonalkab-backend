@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from app.db import Base
 
@@ -7,7 +7,7 @@ class Skin(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), nullable=False)
-    descripcion = Column(String(255), nullable=True)
+    descripcion = Column(Text, nullable=True)
     imagen_url = Column(String(255), nullable=False)
     es_premium = Column(Boolean, default=False)
     precio_monedas = Column(Integer, default=0, nullable=False)
