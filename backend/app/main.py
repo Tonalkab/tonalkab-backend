@@ -31,10 +31,22 @@ from app.core.tasks import limpiar_conexiones_inactivas
 from app.core.limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Tonalkab API", description="API Core para la plataforma de monitoreo inteligente Tonalkab")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ---------------------------------------------------------
+# CORS CONFIGURATION
+# ---------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Permitimos cualquier origen (incluyendo web local o produccion)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------------------------------------------------------
 # CONFIGURACIÓN DE ARCHIVOS ESTÁTICOS (SKINS)
