@@ -42,8 +42,12 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # ---------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Permitimos cualquier origen (incluyendo web local o produccion)
-    allow_credentials=False, # Si es True y origins es "*", bloquea CORS en muchos navegadores
+    allow_origins=[
+        "http://localhost:5173", 
+        "https://greenhouse.tonalkab.com", 
+        "http://greenhouse.tonalkab.com"
+    ], 
+    allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"],
 )
