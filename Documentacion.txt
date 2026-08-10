@@ -2388,4 +2388,73 @@ MODIFY COLUMN descripcion TEXT NULL;
 - **Panel de Administración Móvil (`tonalkab/src/screens/AdminPanelScreen.js`):**
   - Interfaz con selector de fotos desde la galería del dispositivo (`expo-image-picker`), formularios de subida de skins y plantas, panel de métricas globales.
   - **Pestaña 🪙 Monedas:** Buscador de usuarios por nombre o correo, visualización de saldo actual en tiempo real, chips de montos rápidos (+100, +500, +1,000, +5,000), selector manual y botón de transferencia directa a la billetera del usuario.
+
+---
+
+### 🏗️ CONTEXTO DE INFRAESTRUCTURA Y CIBERSEGURIDAD: SERVIDOR TONALKAB
+Propósito: Este documento describe la arquitectura actual, las reglas de firewall, la contenerización y el enrutamiento del servidor de producción para el proyecto "Tonalkab". Cualquier código o sugerencia generada debe respetar estrictamente estos lineamientos de seguridad.
+
+1. Servidor Base y Hardening (Debian 13)
+El servidor es un VPS corriendo Debian 13 (Testing). Se ha priorizado la reducción de la superficie de ataque mediante las siguientes configuraciones de sistema:
+
+Administración de Usuarios: El acceso mediante la cuenta root está completamente prohibido (PermitRootLogin no). Toda la administración se realiza a través del usuario personal tonalkab, el cual cuenta con privilegios sudo.
+
+Seguridad SSH: El demonio SSH (/etc/ssh/sshd_config) fue reconfigurado para escuchar en el puerto no estándar 2022, evadiendo escaneos automatizados. Solo se permite el acceso mediante llaves criptográficas (PubkeyAuthentication yes), estando la autenticación por contraseña desactivada.
+
+Firewall (UFW): Opera bajo una política estricta de "Denegar por defecto" (default deny incoming). Los únicos puertos abiertos hacia internet son:
+
+2022/tcp (SSH Administrativo)
+
+80/tcp (HTTP - Solo para redirección a HTTPS)
+
+443/tcp (HTTPS - Tráfico cifrado de la API)
+
+2. Blindaje del Ecosistema Docker
+El entorno ejecuta contenedores gestionados mediante docker-compose.yml. Para corregir la vulnerabilidad donde Docker manipula iptables y expone puertos ignorando a UFW, se ha implementado la utilidad ufw-docker. Ningún contenedor es accesible desde internet a menos que sea explícitamente enrutado a través del proxy inverso en el host.
+
+Servicios de Docker Compose:
+Backend (FastAPI):
+
+Imagen basada en python:3.11-slim.
+
+Utiliza la variable de entorno PYTHONPATH=/app.
+
+Seguridad de Red: El puerto 8000 del contenedor está mapeado EXCLUSIVAMENTE al localhost del servidor (127.0.0.1:8000:8000). No responde a peticiones externas.
+
+Base de Datos (MySQL 8.0):
+
+Seguridad de Red: No tiene puertos mapeados hacia el exterior de ninguna forma. Solo puede ser accedida por el backend a través de la red virtual interna de Docker (tonalkab_net).
+
+Persistencia garantizada mediante un Docker Volume nombrado db_data.
+
+Cuenta con un healthcheck nativo que bloquea el arranque del backend hasta que el motor InnoDB esté 100% operativo.
+
+3. Enrutamiento y Proxy Inverso (Nginx)
+El único punto de entrada público a la aplicación es el demonio Nginx instalado directamente en el host (no dockerizado). Toda la API responde exclusivamente bajo el subdominio asignado: api.tonalkab.com.
+
+Archivos de Configuración: Las reglas están definidas en /etc/nginx/sites-available/ y enlazadas a sites-enabled/.
+
+Cifrado SSL/TLS: Se gestiona mediante Certbot (Let's Encrypt). Nginx intercepta todo el tráfico que llega al puerto 80 y aplica una redirección automática HTTP -> HTTPS (puerto 443). Las renovaciones de los certificados están automatizadas.
+
+Lógica del Proxy: Cuando una petición validada y cifrada llega a https://api.tonalkab.com, Nginx actúa como Reverse Proxy (mediante la directiva proxy_pass) y empuja el tráfico internamente hacia http://127.0.0.1:8000 (donde escucha el contenedor de FastAPI).
+
+4. Directorio y Estructura de Archivos
+La disposición física en el disco duro del usuario tonalkab está estrictamente organizada:
+
+~/tonalkab-backend/: Directorio raíz del proyecto. Contiene el código fuente en Python, la subcarpeta app/models/ (donde residen las definiciones de SQLAlchemy para las 16 tablas del sistema, incluyendo usuarios, macetas, sensores, etc.) y el archivo docker-compose.yml.
+
+~/tonalkab-backend/.env: Archivo de variables de entorno donde residen las credenciales críticas de la DB y el SECRET_KEY de JWT. No versionado en Git.
+
+~/scripts/backup_db.sh: Script ejecutable en bash diseñado para extraer volcados SQL mediante mysqldump desde dentro del contenedor MySQL.
+
+~/backups/mysql/: Almacén local donde se guardan los archivos comprimidos .sql.gz del histórico de la base de datos.
+
+Automatización Cron: Existe una tarea en el crontab del sistema que despierta todos los días a las 3:00 AM para ejecutar el script de respaldo de forma silenciosa.
+
+5. Arquitectura de Autenticación
+Usuarios Finales: Se manejan mediante tokens JWT con tiempo de expiración. Se tiene integrado el proveedor google-auth para inicio de sesión de terceros (tabla auth_providers).
+
+Dispositivos IoT (ESP32): El ecosistema de macetas inteligentes (las cuales operan bajo un principio de generación de energía por biomediación/descomposición de microorganismos) se comunica con el backend mediante un API Key único generado con secrets.token_urlsafe(32) y validado contra un hash criptográfico SHA-256 en la base de datos.
+
+REGLA DE ASISTENCIA: Cualquier recomendación de arquitectura, nuevo endpoint o modificación al docker-compose debe asumir que la base de datos MySQL debe permanecer completamente oculta al exterior, y que FastAPI solo puede comunicarse con el exterior a través del puente configurado en Nginx hacia 127.0.0.1:8000.
 
