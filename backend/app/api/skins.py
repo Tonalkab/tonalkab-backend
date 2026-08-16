@@ -43,6 +43,7 @@ def get_tienda_skins(
             imagen_url=s.imagen_url,
             es_premium=s.es_premium,
             precio_monedas=s.precio_monedas or 0,
+            categoria=s.categoria,
             desbloqueada=desbloqueada,
             en_uso=en_uso
         ))
