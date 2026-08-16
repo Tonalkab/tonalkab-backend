@@ -11,7 +11,9 @@ services:
     networks:
       - tonalkab_net
     ports:
-      - "127.0.0.1:8000:8000" # Seguro por defecto para VPS
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - backend_assets:/app/app/assets
 
 
   db:
@@ -37,3 +39,4 @@ networks:
   tonalkab_net:
 volumes:
   db_data:
+  backend_assets:
