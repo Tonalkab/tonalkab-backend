@@ -8,6 +8,7 @@ class SkinBase(BaseModel):
     imagen_url: str
     es_premium: bool
     precio_monedas: int = 0
+    categoria: str = "comun"
 
     class Config:
         from_attributes = True

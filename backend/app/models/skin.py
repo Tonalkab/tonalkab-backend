@@ -11,6 +11,7 @@ class Skin(Base):
     imagen_url = Column(String(255), nullable=False)
     es_premium = Column(Boolean, default=False)
     precio_monedas = Column(Integer, default=0, nullable=False)
+    categoria = Column(String(20), default="comun", nullable=False)
 
     # Relaciones inversas hacia las tablas puente
     usuarios_rel = relationship("UsuarioSkin", back_populates="skin")

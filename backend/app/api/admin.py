@@ -57,6 +57,7 @@ def crear_skin_admin(
     descripcion: Optional[str] = Form(None),
     es_premium: bool = Form(False),
     precio_monedas: int = Form(0),
+    categoria: str = Form("comun"),
     imagen: UploadFile = File(...),
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user)
@@ -94,7 +95,8 @@ def crear_skin_admin(
         descripcion=descripcion.strip() if descripcion else None,
         imagen_url=imagen_url,
         es_premium=es_premium,
-        precio_monedas=precio_monedas
+        precio_monedas=precio_monedas,
+        categoria=categoria.strip()
     )
 
     db.add(nueva_skin)
