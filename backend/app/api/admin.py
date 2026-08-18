@@ -397,10 +397,9 @@ def init_tienda_tables(db: Session = Depends(get_db)):
         FOREIGN KEY (id_skin) REFERENCES skins(id) ON DELETE CASCADE
     );
     """))
-    # Insertar default
     db.execute(text("""
     INSERT IGNORE INTO productos_tienda (id, nombre, tipo, cantidad_semillas, precio_moneda_local, icono, recomendado) VALUES
-    (1, 'Paquete Básico', 'semilla', 500, 0.99, '🌱', FALSE),
+    (1, 'Paquete Basico', 'semilla', 500, 0.99, '🌱', FALSE),
     (2, 'Paquete Medio', 'semilla', 1200, 1.99, '🌿', FALSE),
     (3, 'Paquete Avanzado', 'semilla', 3000, 3.99, '🌳', TRUE),
     (4, 'Paquete Experto', 'semilla', 8000, 8.99, '🌍', FALSE),
@@ -408,4 +407,3 @@ def init_tienda_tables(db: Session = Depends(get_db)):
     """))
     db.commit()
     return {"message": "Tablas creadas e inicializadas."}
-
