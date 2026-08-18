@@ -312,8 +312,8 @@ class ProductoTiendaUpdate(BaseModel):
     cantidad_semillas: int
     precio_moneda_local: float
     icono: str
-    recomendado: bool
-    activo: bool
+    recomendado: bool | None = False
+    activo: bool | None = True
 
 @router.get("/tienda/productos")
 def listar_productos_tienda(db: Session = Depends(get_db), admin: User = Depends(get_current_admin_user)):

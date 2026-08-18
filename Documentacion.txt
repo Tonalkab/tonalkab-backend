@@ -2453,4 +2453,9 @@ Usuarios Finales: Se manejan mediante tokens JWT con tiempo de expiración. Se t
 Dispositivos IoT (ESP32): El ecosistema de macetas inteligentes (las cuales operan bajo un principio de generación de energía por biomediación/descomposición de microorganismos) se comunica con el backend mediante un API Key único generado con secrets.token_urlsafe(32) y validado contra un hash criptográfico SHA-256 en la base de datos.
 
 REGLA DE ASISTENCIA: Cualquier recomendación de arquitectura, nuevo endpoint o modificación al docker-compose debe asumir que la base de datos MySQL debe permanecer completamente oculta al exterior, y que FastAPI solo puede comunicarse con el exterior a través del puente configurado en Nginx hacia 127.0.0.1:8000.
-
+
+
+# --- CAMBIOS FASE 2: TIENDA DINÁMICA Y PROMOCIONES ---
+- Se agregaron las tablas productos_tienda y promociones_skins.
+- El panel de administrador (tonalkab-admin) ahora tiene la ruta /store para gestionar ofertas y precios.
+- En la base de datos se cambió Monedas -> Semillas en el modelo de negocio.
