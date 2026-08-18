@@ -16,10 +16,13 @@ class SkinBase(BaseModel):
 class SkinTiendaItem(SkinBase):
     desbloqueada: bool = False
     en_uso: bool = False
+    en_promocion: bool = False
+    precio_original: int = 0
 
 class SkinTiendaResponse(BaseModel):
     saldo_monedas: int
     skins: List[SkinTiendaItem]
+    productos: list = []
 
 class UsuarioSkinResponse(BaseModel):
     id_skin: int

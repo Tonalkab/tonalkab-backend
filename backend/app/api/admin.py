@@ -10,6 +10,10 @@ from app.models.user import User
 from app.models.skin import Skin
 from app.models.tipo_planta import TipoPlanta
 from app.models.maceta import Maceta
+from app.models.tienda import ProductoTienda, PromocionSkin
+from pydantic import BaseModel
+from datetime import datetime
+from sqlalchemy import text
 from app.api.auth import get_current_admin_user
 from app.schemas.skin import SkinBase
 
@@ -295,3 +299,113 @@ def actualizar_imagen_skin(
     db.refresh(skin)
 
     return {"message": "Imagen actualizada exitosamente", "imagen_url": skin.imagen_url}
+
+
+# ==========================================
+# 🏪 GESTIÓN DE TIENDA (PRODUCTOS)
+# ==========================================
+
+class ProductoTiendaUpdate(BaseModel):
+    nombre: str
+    descripcion: str | None = None
+    tipo: str
+    cantidad_semillas: int
+    precio_moneda_local: float
+    icono: str
+    recomendado: bool
+    activo: bool
+
+@router.get("/tienda/productos")
+def listar_productos_tienda(db: Session = Depends(get_db), admin: User = Depends(get_current_admin_user)):
+    return db.query(ProductoTienda).all()
+
+@router.put("/tienda/productos/{id}")
+def actualizar_producto_tienda(id: int, producto: ProductoTiendaUpdate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin_user)):
+    prod = db.query(ProductoTienda).filter(ProductoTienda.id == id).first()
+    if not prod:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    prod.nombre = producto.nombre
+    prod.descripcion = producto.descripcion
+    prod.tipo = producto.tipo
+    prod.cantidad_semillas = producto.cantidad_semillas
+    prod.precio_moneda_local = producto.precio_moneda_local
+    prod.icono = producto.icono
+    prod.recomendado = producto.recomendado
+    prod.activo = producto.activo
+    
+    db.commit()
+    return {"message": "Producto actualizado"}
+
+# ==========================================
+# ⏱️ PROMOCIONES DE SKINS
+# ==========================================
+
+class PromocionCreate(BaseModel):
+    precio_oferta: int
+    fecha_inicio: datetime
+    fecha_fin: datetime
+
+@router.get("/skins/promociones")
+def listar_promociones(db: Session = Depends(get_db), admin: User = Depends(get_current_admin_user)):
+    return db.query(PromocionSkin).all()
+
+@router.post("/skins/{id}/promocion")
+def crear_promocion_skin(id: int, promo: PromocionCreate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin_user)):
+    # Eliminar promo anterior si existe
+    db.query(PromocionSkin).filter(PromocionSkin.id_skin == id).delete()
+    
+    nueva_promo = PromocionSkin(
+        id_skin=id,
+        precio_oferta=promo.precio_oferta,
+        fecha_inicio=promo.fecha_inicio,
+        fecha_fin=promo.fecha_fin
+    )
+    db.add(nueva_promo)
+    db.commit()
+    return {"message": "Promoción creada"}
+
+@router.delete("/skins/promocion/{id}")
+def eliminar_promocion(id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin_user)):
+    db.query(PromocionSkin).filter(PromocionSkin.id == id).delete()
+    db.commit()
+    return {"message": "Promoción eliminada"}
+
+# Inicializador rápido de tablas
+@router.post("/tienda/init")
+def init_tienda_tables(db: Session = Depends(get_db)):
+    db.execute(text("""
+    CREATE TABLE IF NOT EXISTS productos_tienda (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nombre VARCHAR(100) NOT NULL,
+        descripcion VARCHAR(255) NULL,
+        tipo VARCHAR(50) NOT NULL,
+        cantidad_semillas INT DEFAULT 0,
+        precio_moneda_local FLOAT NOT NULL,
+        icono VARCHAR(10) DEFAULT '🌱',
+        recomendado BOOLEAN DEFAULT FALSE,
+        activo BOOLEAN DEFAULT TRUE
+    );
+    """))
+    db.execute(text("""
+    CREATE TABLE IF NOT EXISTS promociones_skins (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        id_skin INT NOT NULL,
+        precio_oferta INT NOT NULL,
+        fecha_inicio DATETIME NOT NULL,
+        fecha_fin DATETIME NOT NULL,
+        FOREIGN KEY (id_skin) REFERENCES skins(id) ON DELETE CASCADE
+    );
+    """))
+    # Insertar default
+    db.execute(text("""
+    INSERT IGNORE INTO productos_tienda (id, nombre, tipo, cantidad_semillas, precio_moneda_local, icono, recomendado) VALUES
+    (1, 'Paquete Básico', 'semilla', 500, 0.99, '🌱', FALSE),
+    (2, 'Paquete Medio', 'semilla', 1200, 1.99, '🌿', FALSE),
+    (3, 'Paquete Avanzado', 'semilla', 3000, 3.99, '🌳', TRUE),
+    (4, 'Paquete Experto', 'semilla', 8000, 8.99, '🌍', FALSE),
+    (5, 'Club Tonalkab Premium', 'suscripcion', 1000, 4.99, '⭐', FALSE);
+    """))
+    db.commit()
+    return {"message": "Tablas creadas e inicializadas."}
+

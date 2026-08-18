@@ -23,37 +23,61 @@ def get_tienda_skins(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Devuelve todas las skins con el estado de posesión para el usuario 
-    actual y su saldo disponible de monedas.
-    """
+    from app.models.tienda import ProductoTienda, PromocionSkin
+    from datetime import datetime
+
     todas_skins = db.query(Skin).all()
     mis_skins = db.query(UsuarioSkin).filter(UsuarioSkin.id_usuario == current_user.id_usuario).all()
-    
     dict_mis_skins = {item.id_skin: item.equipado for item in mis_skins}
     
+    # Evaluar promociones activas
+    now = datetime.utcnow()
+    promos = db.query(PromocionSkin).filter(PromocionSkin.fecha_inicio <= now, PromocionSkin.fecha_fin >= now).all()
+    dict_promos = {p.id_skin: p.precio_oferta for p in promos}
+
     items = []
     for s in todas_skins:
         desbloqueada = s.id in dict_mis_skins
         en_uso = dict_mis_skins.get(s.id, False)
+        
+        # Aplicar promo
+        en_promo = s.id in dict_promos
+        precio_final = dict_promos[s.id] if en_promo else (s.precio_monedas or 0)
+        
         items.append(SkinTiendaItem(
             id=s.id,
             nombre=s.nombre,
             descripcion=s.descripcion,
             imagen_url=s.imagen_url,
             es_premium=s.es_premium,
-            precio_monedas=s.precio_monedas or 0,
+            precio_monedas=precio_final,
+            precio_original=s.precio_monedas or 0,
+            en_promocion=en_promo,
             categoria=s.categoria,
             desbloqueada=desbloqueada,
             en_uso=en_uso
         ))
         
-    return SkinTiendaResponse(
-        saldo_monedas=current_user.monedas or 0,
-        skins=items
-    )
+    # Obtener productos de semillas y suscripciones
+    productos_db = db.query(ProductoTienda).filter(ProductoTienda.activo == True).all()
+    prods = [
+        {
+            "id": p.id,
+            "nombre": p.nombre,
+            "descripcion": p.descripcion,
+            "tipo": p.tipo,
+            "cantidad_semillas": p.cantidad_semillas,
+            "precio_moneda_local": p.precio_moneda_local,
+            "icono": p.icono,
+            "recomendado": p.recomendado
+        } for p in productos_db
+    ]
 
-@router.post("/{id_skin}/comprar")
+    return {
+        "saldo_monedas": current_user.monedas or 0,
+        "skins": items,
+        "productos": prods
+    }\n\n@router.post("/{id_skin}/comprar")
 def comprar_o_desbloquear_skin(
     id_skin: int,
     db: Session = Depends(get_db),
