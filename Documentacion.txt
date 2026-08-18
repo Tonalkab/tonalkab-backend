@@ -2328,20 +2328,20 @@ docker compose exec backend alembic downgrade -1
 
 ---
 
-## 🪙 8. Sistema de Tienda de Skins, Economía de Monedas y Panel de Administración
+## 🪙 8. Sistema de Tienda de Skins, Economía de Semillas 🌱 y Panel de Administración
 
 ### 📜 A. Registro de Cambios en Base de Datos (Historial SQL)
 Para control histórico del esquema, las modificaciones aplicadas mediante la migración de Alembic `0001_gamification_admin` corresponden a las siguientes sentencias DDL en MySQL:
 
 ```sql
--- 1. Billetera de Monedas y Rol de Administrador en la tabla 'usuarios'
+-- 1. Billetera de Semillas 🌱 y Rol de Administrador en la tabla 'usuarios'
 ALTER TABLE usuarios 
-ADD COLUMN monedas INT NOT NULL DEFAULT 100 AFTER id_estado_cuenta,
-ADD COLUMN es_admin BOOLEAN NOT NULL DEFAULT FALSE AFTER monedas;
+ADD COLUMN Semillas 🌱 INT NOT NULL DEFAULT 100 AFTER id_estado_cuenta,
+ADD COLUMN es_admin BOOLEAN NOT NULL DEFAULT FALSE AFTER Semillas 🌱;
 
--- 2. Precio en Monedas en la tabla 'skins' (0 = gratis)
+-- 2. Precio en Semillas 🌱 en la tabla 'skins' (0 = gratis)
 ALTER TABLE skins 
-ADD COLUMN precio_monedas INT NOT NULL DEFAULT 0 AFTER es_premium;
+ADD COLUMN precio_Semillas 🌱 INT NOT NULL DEFAULT 0 AFTER es_premium;
 
 -- 3. Ampliar columna descripcion en 'skins' a TEXT para permitir descripciones largas
 ALTER TABLE skins 
@@ -2352,11 +2352,11 @@ MODIFY COLUMN descripcion TEXT NULL;
 
 ### 🎨 B. Tienda de Skins y Desbloqueo Dinámico (`backend/app/api/skins.py`)
 - **`GET /skins/tienda`:**
-  - Entrega el catálogo de skins enriquecido con el balance actual de monedas del usuario autenticado (`saldo_monedas`) y el estado de cada diseño (`desbloqueada: bool`, `en_uso: bool`).
+  - Entrega el catálogo de skins enriquecido con el balance actual de Semillas 🌱 del usuario autenticado (`saldo_Semillas 🌱`) y el estado de cada diseño (`desbloqueada: bool`, `en_uso: bool`).
 - **`POST /skins/{id_skin}/comprar`:**
   - Valida el inventario del usuario (`UsuarioSkin`).
-  - Si la skin es gratuita (`precio_monedas == 0`), se desbloquea directamente.
-  - Si tiene costo (`precio_monedas > 0`), valida que `usuario.monedas >= precio`, descuenta el saldo y añade la skin a `UsuarioSkin`.
+  - Si la skin es gratuita (`precio_Semillas 🌱 == 0`), se desbloquea directamente.
+  - Si tiene costo (`precio_Semillas 🌱 > 0`), valida que `usuario.Semillas 🌱 >= precio`, descuenta el saldo y añade la skin a `UsuarioSkin`.
 - **`POST /macetas/{id_maceta}/skins/{id_skin}/equipar`:**
   - Aplica la skin a la maceta seleccionada siempre que el usuario sea propietario de la misma.
 
@@ -2366,28 +2366,24 @@ MODIFY COLUMN descripcion TEXT NULL;
 - **Dependencia de Seguridad (`backend/app/api/auth.py`):**
   - `get_current_admin_user`: Intercepta la petición y valida `current_user.es_admin == True`. Rechaza con `403 Forbidden` a usuarios convencionales.
 - **Endpoints Multipart / Form-Data y Billetera (Sin comandos SQL manuales):**
-  - `POST /admin/skins`: Recibe nombre, descripción, precio en monedas, es_premium y el archivo de imagen binario (`UploadFile`). Guarda físicamente la imagen en `app/assets/skins/` y crea el registro en la tabla `Skin`.
+  - `POST /admin/skins`: Recibe nombre, descripción, precio en Semillas 🌱, es_premium y el archivo de imagen binario (`UploadFile`). Guarda físicamente la imagen en `app/assets/skins/` y crea el registro en la tabla `Skin`.
   - `POST /admin/plantas`: Recibe el formulario botánico completo (nombre, rangos de humedad, temperatura, días de riego, dificultad) y fotografía opcional. Registra en `TipoPlanta`.
   - `GET /admin/stats`: Proporciona métricas en tiempo real (total de usuarios, macetas registradas, skins y catálogo botánico).
-  - `GET /admin/usuarios`: Búsqueda y listado de usuarios del sistema con su saldo de monedas y rol para administración.
-  - `POST /admin/usuarios/{id_usuario}/monedas`: Permite a un administrador transferir, recargar o ajustar monedas a cualquier usuario en tiempo real.
+  - `GET /admin/usuarios`: Búsqueda y listado de usuarios del sistema con su saldo de Semillas 🌱 y rol para administración.
+  - `POST /admin/usuarios/{id_usuario}/Semillas 🌱`: Permite a un administrador transferir, recargar o ajustar Semillas 🌱 a cualquier usuario en tiempo real.
 
 ---
 
-### 📱 D. Experiencia en la App Móvil (React Native / Expo)
-- **Boutique & Vestidor (`tonalkab/src/screens/MacetaVestidorScreen.js`):**
-  - Indicador de saldo de monedas `🪙` en el header superior.
-  - Botones con feedback dinámico:
-    - `"✓ En Uso"` (deshabilitado).
-    - `"Aplicar Estilo"` (activo para skins desbloqueadas).
-    - `"🎁 Reclamar Gratis"` (para diseños con costo 0).
-    - `"🪙 Comprar por {precio} Monedas"` (con validación de saldo).
+### 📱 D. Experiencia en la App Móvil (React Native / Expo)- **Tienda & Boutique (`tonalkab/src/screens/TiendaScreen.js` y `MacetaVestidorScreen.js`):**
+  - La pantalla principal de la tienda incluye pestañas para Suscripción Premium y Venta de Semillas (ambos con UI decorativa para Fase 1).
+  - La boutique muestra indicador de saldo de Semillas 🌱.
+  - Botones con feedback dinámico para aplicar estilo o comprar skins pagando en Semillas 🌱.
 - **Perfil de Usuario (`tonalkab/src/screens/PerfilScreen.js`):**
-  - Muestra el saldo de monedas del usuario.
+  - Muestra el saldo de Semillas 🌱 del usuario.
   - Badge `"ADMIN"` y botón exclusivo de acceso directo a `"⚙️ Panel de Gestión"` para administradores.
 - **Panel de Administración Móvil (`tonalkab/src/screens/AdminPanelScreen.js`):**
   - Interfaz con selector de fotos desde la galería del dispositivo (`expo-image-picker`), formularios de subida de skins y plantas, panel de métricas globales.
-  - **Pestaña 🪙 Monedas:** Buscador de usuarios por nombre o correo, visualización de saldo actual en tiempo real, chips de montos rápidos (+100, +500, +1,000, +5,000), selector manual y botón de transferencia directa a la billetera del usuario.
+  - **Pestaña 🪙 Semillas 🌱:** Buscador de usuarios por nombre o correo, visualización de saldo actual en tiempo real, chips de montos rápidos (+100, +500, +1,000, +5,000), selector manual y botón de transferencia directa a la billetera del usuario.
 
 ---
 
