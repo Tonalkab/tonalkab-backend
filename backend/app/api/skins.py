@@ -77,16 +77,17 @@ def get_tienda_skins(
         "saldo_monedas": current_user.monedas or 0,
         "skins": items,
         "productos": prods
-    }\n\n@router.post("/{id_skin}/comprar")
+    }
+
+
+@router.post("/{id_skin}/comprar")
 def comprar_o_desbloquear_skin(
     id_skin: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Permite al usuario adquirir una skin:
-    - Si es gratis (precio_monedas == 0), la desbloquea sin costo.
-    - Si tiene costo en monedas, valida saldo suficiente, descuenta y desbloquea.
+    Permite al usuario adquirir una skin evaluando promociones.
     """
     skin = db.query(Skin).filter(Skin.id == id_skin).first()
     if not skin:
@@ -104,12 +105,19 @@ def comprar_o_desbloquear_skin(
     
     if ya_obtenida:
         return {
-            "message": "Ya tienes esta skin en tu colección",
+            "message": "Ya tienes esta skin en tu coleccin",
             "id_skin": id_skin,
             "saldo_monedas": usuario.monedas
         }
         
     precio = skin.precio_monedas or 0
+    from app.models.tienda import PromocionSkin
+    from datetime import datetime
+    now = datetime.utcnow()
+    promo = db.query(PromocionSkin).filter(PromocionSkin.id_skin == id_skin, PromocionSkin.fecha_inicio <= now, PromocionSkin.fecha_fin >= now).first()
+    if promo:
+        precio = promo.precio_oferta
+
     if precio > 0:
         if (usuario.monedas or 0) < precio:
             raise HTTPException(
@@ -128,7 +136,7 @@ def comprar_o_desbloquear_skin(
     db.refresh(usuario)
     
     return {
-        "message": f"¡Skin '{skin.nombre}' desbloqueada exitosamente!",
+        "message": f"Skin '{skin.nombre}' desbloqueada exitosamente!",
         "id_skin": id_skin,
         "saldo_monedas": usuario.monedas
     }
