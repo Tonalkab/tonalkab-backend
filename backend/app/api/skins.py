@@ -59,7 +59,7 @@ def get_tienda_skins(
         ))
         
     # Obtener productos de semillas y suscripciones
-    productos_db = db.query(ProductoTienda).filter(ProductoTienda.activo == True).all()
+    productos_db = db.query(ProductoTienda).all()
     prods = [
         {
             "id": p.id,
