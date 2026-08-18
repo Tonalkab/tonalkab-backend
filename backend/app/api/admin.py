@@ -248,3 +248,50 @@ def otorgar_monedas_admin(
         "saldo_nuevo": usuario.monedas
     }
 
+
+
+# ==========================================
+# 🔄 ACTUALIZAR IMAGEN DE UNA SKIN
+# ==========================================
+@router.put("/skins/{skin_id}/imagen")
+def actualizar_imagen_skin(
+    skin_id: int,
+    imagen: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user)
+):
+    skin = db.query(Skin).filter(Skin.id == skin_id).first()
+    if not skin:
+        raise HTTPException(status_code=404, detail="Skin no encontrada.")
+
+    # 1. Validar extensión de imagen
+    ext = os.path.splitext(imagen.filename)[1].lower()
+    if ext not in [".png", ".jpg", ".jpeg", ".webp", ".svg"]:
+        raise HTTPException(status_code=400, detail="Formato de imagen inválido.")
+
+    # 2. Generar nombre único y guardar
+    safe_filename = f"{uuid.uuid4().hex[:12]}_{imagen.filename.replace(' ', '_')}"
+    new_filepath = os.path.join(SKINS_DIR, safe_filename)
+
+    try:
+        with open(new_filepath, "wb") as buffer:
+            shutil.copyfileobj(imagen.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al guardar la imagen: {str(e)}")
+
+    # 3. Eliminar la imagen anterior si existe físicamente (Opcional, pero buena práctica)
+    if skin.imagen_url:
+        old_filename = os.path.basename(skin.imagen_url)
+        old_filepath = os.path.join(SKINS_DIR, old_filename)
+        if os.path.exists(old_filepath):
+            try:
+                os.remove(old_filepath)
+            except:
+                pass
+
+    # 4. Actualizar la base de datos
+    skin.imagen_url = f"/assets/skins/{safe_filename}"
+    db.commit()
+    db.refresh(skin)
+
+    return {"message": "Imagen actualizada exitosamente", "imagen_url": skin.imagen_url}
