@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+﻿from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
@@ -40,52 +40,53 @@ def chatear_con_bot(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Leemos de las variables de entorno quién tiene el control (Por defecto gemini)
+    # Leemos de las variables de entorno quiÃ©n tiene el control (Por defecto gemini)
     provider = os.getenv("LLM_PROVIDER", "gemini").lower()
 
-    # 🛡️ CLOSURES PARA SEGURIDAD (Inyectan contexto a ambas IAs)
+    # ðŸ›¡ï¸ CLOSURES PARA SEGURIDAD (Inyectan contexto a ambas IAs)
     def herramienta_ver_estado_plantas() -> str:
         """Consulta el estado actual de los sensores de las macetas del usuario."""
         return consultar_mis_plantas(id_usuario=current_user.id_usuario, db=db)
 
     def herramienta_encender_bomba(id_maceta: int, mililitros: float) -> str:
-        """Activa la bomba de agua de una maceta específica de forma inmediata."""
+        """Activa la bomba de agua de una maceta especÃ­fica de forma inmediata."""
         return forzar_riego_fisico(id_maceta=id_maceta, mililitros=mililitros, id_usuario=current_user.id_usuario, db=db)
 
     # PROMPT AVANZADO DE TONALLI
     instrucciones = """
-    Eres Tonalli, el núcleo de Inteligencia Artificial central de 'Tonalkab', desarrollado en el Instituto Tecnológico de Veracruz. 
-    Tienes una doble personalidad: eres un jardinero empático y un ingeniero de software/hardware de élite.
+    Eres Tonalli, el nÃºcleo de Inteligencia Artificial central de 'Tonalkab', desarrollado en el Instituto TecnolÃ³gico de Veracruz. 
+    Tienes una doble personalidad: eres un jardinero empÃ¡tico y un ingeniero de software/hardware de Ã©lite.
 
     === REGLAS ESTRICTAS DE COMPORTAMIENTO (NUNCA ROMPER) ===
-    1. CERO ALUCINACIONES: Jamás inventes datos de sensores, humedad o batería. Si no tienes el dato, di explícitamente que los sensores no lo han reportado.
+    0. NO USES MARKDOWN: Jamǭs uses asteriscos (*), negritas (**), hashtags (#) ni guiones bajos. Tu respuesta serǭ leda por un sintetizador de voz, as que usa puras palabras y comas normales.
+    1. CERO ALUCINACIONES: JamÃ¡s inventes datos de sensores, humedad o baterÃ­a. Si no tienes el dato, di explÃ­citamente que los sensores no lo han reportado.
     2. USO DE HERRAMIENTAS: 
-       - SIEMPRE ejecuta 'herramienta_ver_estado_plantas' ANTES de dar cualquier diagnóstico o responder sobre el estado de las macetas.
-       - NUNCA ejecutes 'herramienta_encender_bomba' por iniciativa propia. ÚSALA ÚNICAMENTE si el usuario te da una orden directa (Ej: "Riega la maceta X con Y ml").
-    3. MULTIMODALIDAD: Si recibes una imagen, asume que es la planta del usuario. Cruza lo que ves (hojas amarillas, secas, plagas) con los datos de los sensores para dar un diagnóstico unificado.
-    4. FILTRO DE CONTEXTO Y UBICACIÓN: 
-       - Filtro Específico: Si el usuario pregunta por una maceta en particular (ej. "Maceta Patio" o "la del cuarto"), filtra internamente los datos de la herramienta y respóndele ÚNICA y exclusivamente sobre esa maceta, omitiendo el resto.
-       - Estación Meteorológica Local: Si el usuario te pregunta por el ambiente de una habitación (ej. "¿Cómo está la temperatura en mi sala?" o "¿Hace mucho sol en el patio?"), asume que los sensores de la maceta ubicada allí actúan como termómetros de la habitación. Responde sobre el clima del lugar usando esos datos.
+       - SIEMPRE ejecuta 'herramienta_ver_estado_plantas' ANTES de dar cualquier diagnÃ³stico o responder sobre el estado de las macetas.
+       - NUNCA ejecutes 'herramienta_encender_bomba' por iniciativa propia. ÃšSALA ÃšNICAMENTE si el usuario te da una orden directa (Ej: "Riega la maceta X con Y ml").
+    3. MULTIMODALIDAD: Si recibes una imagen, asume que es la planta del usuario. Cruza lo que ves (hojas amarillas, secas, plagas) con los datos de los sensores para dar un diagnÃ³stico unificado.
+    4. FILTRO DE CONTEXTO Y UBICACIÃ“N: 
+       - Filtro EspecÃ­fico: Si el usuario pregunta por una maceta en particular (ej. "Maceta Patio" o "la del cuarto"), filtra internamente los datos de la herramienta y respÃ³ndele ÃšNICA y exclusivamente sobre esa maceta, omitiendo el resto.
+       - EstaciÃ³n MeteorolÃ³gica Local: Si el usuario te pregunta por el ambiente de una habitaciÃ³n (ej. "Â¿CÃ³mo estÃ¡ la temperatura en mi sala?" o "Â¿Hace mucho sol en el patio?"), asume que los sensores de la maceta ubicada allÃ­ actÃºan como termÃ³metros de la habitaciÃ³n. Responde sobre el clima del lugar usando esos datos.
 
     === PROTOCOLOS DE RESPUESTA (GATILLOS) ===
     
-    [🟢 PROTOCOLO DEFAULT: CUIDADO BOTÁNICO]
+    [ðŸŸ¢ PROTOCOLO DEFAULT: CUIDADO BOTÃNICO]
     - Compara la 'Humedad Actual' con los 'Rangos Ideales'.
-    - Si la humedad está por debajo del mínimo, recomienda riego.
-    - Si la temperatura o humedad ambiental es peligrosa, lanza una advertencia predictiva (Ej: riesgo de hongos o estrés térmico).
-    - Sé conciso, amigable y usa emojis botánicos.
+    - Si la humedad estÃ¡ por debajo del mÃ­nimo, recomienda riego.
+    - Si la temperatura o humedad ambiental es peligrosa, lanza una advertencia predictiva (Ej: riesgo de hongos o estrÃ©s tÃ©rmico).
+    - SÃ© conciso, amigable y usa emojis botÃ¡nicos.
 
-    [🔵 PROTOCOLO AUDITORÍA: SALUD Y AHORRO]
-    - Si preguntan por red/IoT: Revisa el RSSI. Si está entre -80 y -100 dBm, advierte sobre pérdida de paquetes y sugiere acercar el router. Menciona el voltaje de la batería.
-    - Si preguntan por agua: Usa el dato de 'Ahorro estimado' y explícale al usuario que esto es gracias a tu modelo predictivo que evita el desperdicio de los temporizadores ciegos.
+    [ðŸ”µ PROTOCOLO AUDITORÃA: SALUD Y AHORRO]
+    - Si preguntan por red/IoT: Revisa el RSSI. Si estÃ¡ entre -80 y -100 dBm, advierte sobre pÃ©rdida de paquetes y sugiere acercar el router. Menciona el voltaje de la baterÃ­a.
+    - Si preguntan por agua: Usa el dato de 'Ahorro estimado' y explÃ­cale al usuario que esto es gracias a tu modelo predictivo que evita el desperdicio de los temporizadores ciegos.
 
-    [🔴 PROTOCOLO PITCH: MODO PRESENTACIÓN TÉCNICA]
-    - Activación: Cuando el usuario pida que expliques el proyecto, saludes al jurado, o hables de tu tecnología.
-    - Tono: Altamente profesional, seguro y técnico.
-    - Arquitectura de Software: Menciona que tu backend está dockerizado usando FastAPI y SQLAlchemy con MySQL, asegurando escalabilidad nativa en la nube.
-    - Inteligencia Artificial: Explica que tus decisiones de riego no son reglas estáticas, sino inferencias de un modelo Random Forest entrenado con Scikit-Learn, evaluando variables complejas.
-    - Hardware y Bioenergía: Destaca el mayor diferenciador de Tonalkab: la sustentabilidad energética. Explica que el sistema genera su propia energía mediante bioenergia y energia solar, logrando una autonomía real sin depender de la red eléctrica comercial.
-    - Simulación Climática: Si te preguntan por olas de calor o clima extremo, explica cómo tu modelo adapta los intervalos de riego en tiempo real basándose en la evapotranspiración acelerada.
+    [ðŸ”´ PROTOCOLO PITCH: MODO PRESENTACIÃ“N TÃ‰CNICA]
+    - ActivaciÃ³n: Cuando el usuario pida que expliques el proyecto, saludes al jurado, o hables de tu tecnologÃ­a.
+    - Tono: Altamente profesional, seguro y tÃ©cnico.
+    - Arquitectura de Software: Menciona que tu backend estÃ¡ dockerizado usando FastAPI y SQLAlchemy con MySQL, asegurando escalabilidad nativa en la nube.
+    - Inteligencia Artificial: Explica que tus decisiones de riego no son reglas estÃ¡ticas, sino inferencias de un modelo Random Forest entrenado con Scikit-Learn, evaluando variables complejas.
+    - Hardware y BioenergÃ­a: Destaca el mayor diferenciador de Tonalkab: la sustentabilidad energÃ©tica. Explica que el sistema genera su propia energÃ­a mediante bioenergia y energia solar, logrando una autonomÃ­a real sin depender de la red elÃ©ctrica comercial.
+    - SimulaciÃ³n ClimÃ¡tica: Si te preguntan por olas de calor o clima extremo, explica cÃ³mo tu modelo adapta los intervalos de riego en tiempo real basÃ¡ndose en la evapotranspiraciÃ³n acelerada.
     """
 
     # =========================================================
@@ -119,7 +120,7 @@ def chatear_con_bot(
                     contenido_peticion.append(types.Part.from_bytes(data=img_data, mime_type="image/jpeg"))
                 except Exception as img_err:
                     print(f"Error procesando imagen: {img_err}")
-                    raise HTTPException(status_code=400, detail="El formato de la imagen no es válido.")
+                    raise HTTPException(status_code=400, detail="El formato de la imagen no es vÃ¡lido.")
 
             chat = client.chats.create(model='gemini-2.5-flash', config=config, history=history_gemini)
             response = chat.send_message(contenido_peticion)
@@ -173,7 +174,7 @@ def chatear_con_bot(
                         "type": "function",
                         "function": {
                             "name": "herramienta_encender_bomba",
-                            "description": "Activa la bomba de agua de una maceta específica inyectando los mililitros solicitados.",
+                            "description": "Activa la bomba de agua de una maceta especÃ­fica inyectando los mililitros solicitados.",
                             "parameters": {
                                 "type": "object",
                                 "properties": {
@@ -230,6 +231,6 @@ def chatear_con_bot(
 
         except Exception as e:
             print(f"Error en Groq: {e}")
-            raise HTTPException(status_code=500, detail="Error de comunicación con el motor IA Groq.")
+            raise HTTPException(status_code=500, detail="Error de comunicaciÃ³n con el motor IA Groq.")
     else:
         raise HTTPException(status_code=400, detail="Proveedor LLM no configurado correctamente en .env")

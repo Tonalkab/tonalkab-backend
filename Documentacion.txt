@@ -2459,3 +2459,12 @@ REGLA DE ASISTENCIA: Cualquier recomendación de arquitectura, nuevo endpoint o 
 - Se agregaron las tablas productos_tienda y promociones_skins.
 - El panel de administrador (tonalkab-admin) ahora tiene la ruta /store para gestionar ofertas y precios.
 - En la base de datos se cambió Monedas -> Semillas en el modelo de negocio.
+
+
+# --- CAMBIOS FASE 3: REDES E INTELIGENCIA ARTIFICIAL ---
+- App Móvil (Configuración BLE): Se implementó la refactorización de VincularMacetaScreen.js y MacetaConfigScreen.js. La app ahora se conecta a la maceta mediante Bluetooth Low Energy (BLE) y le envía comandos JSON para actualizar las redes WiFi asincrónicamente sin perder la identidad de la maceta en la base de datos (Token).
+- Firmware ESP32 (Auto-reconectado y BLE): Se integró el código de configuración de red en modo BLE en TestBLEConfig.ino. El ESP32 ahora tiene un modo de escaneo asíncrono, pulldown físico en el Pin 10, y una rutina de auto-reconexión pasiva de 10 segundos al perder WiFi sin bloquear el código principal.
+- IA Tonalli (Bot Multimodal): Se analizó y validó la arquitectura del Agente en bot.py.
+  - Herramientas: Ejecuta funciones nativas (consultar_mis_plantas y forzar_riego_fisico) usando un inyector de seguridad por Closure para proteger los id_usuario.
+  - Motores Multi-LLM: Implementa Gemini (2.5-flash) como base predeterminada y Groq (llama-3) como fallback con reconocimiento de imágenes dinámico.
+  - Text-To-Speech: La aplicación móvil ahora incorpora expo-speech en TonalliScreen.js para vocalizar automáticamente las respuestas de la IA de forma nativa.
