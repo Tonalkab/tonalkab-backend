@@ -9,6 +9,7 @@ class LecturaCreate(BaseModel):
     nivel_luz: int = Field(0, ge=0, le=100000, description="Nivel de luz / Lux / ADC")
     nivel_agua: int = Field(0, ge=0, le=100, description="Porcentaje de nivel de agua en tanque (0-100%)")
     voltaje_bateria: float = Field(0.0, ge=0.0, le=15.0, description="Voltaje de la batería en Volts")
+    porcentaje_bateria: Optional[float] = Field(None, ge=0.0, le=100.0, description="Porcentaje de la batería (0-100%)")
 
 class LecturaResponse(LecturaCreate):
     id_lectura: int
