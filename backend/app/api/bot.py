@@ -131,7 +131,7 @@ def chatear_con_bot(
                         base64_str_a = base64_str_a.split("base64,")[1]
                     base64_str_a += "=" * ((4 - len(base64_str_a) % 4) % 4)
                     audio_data = base64.b64decode(base64_str_a)
-                    contenido_peticion.append(types.Part.from_bytes(data=audio_data, mime_type="audio/m4a"))
+                    contenido_peticion.append(types.Part.from_bytes(data=audio_data, mime_type="audio/mp4"))
                 except Exception as aud_err:
                     print(f"Error procesando audio: {aud_err}")
                     raise HTTPException(status_code=400, detail="El formato de audio no es válido.")
