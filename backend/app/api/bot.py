@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
@@ -28,6 +28,7 @@ class BotChatRequest(BaseModel):
     mensaje: str
     historial: List[ChatMessage] = []
     imagen_base64: Optional[str] = None
+    audio_base64: Optional[str] = None
 
 class BotChatResponse(BaseModel):
     respuesta: str
@@ -122,6 +123,18 @@ def chatear_con_bot(
                 except Exception as img_err:
                     print(f"Error procesando imagen: {img_err}")
                     raise HTTPException(status_code=400, detail="El formato de la imagen no es vÃ¡lido.")
+
+            if payload.audio_base64:
+                try:
+                    base64_str_a = payload.audio_base64
+                    if "base64," in base64_str_a:
+                        base64_str_a = base64_str_a.split("base64,")[1]
+                    base64_str_a += "=" * ((4 - len(base64_str_a) % 4) % 4)
+                    audio_data = base64.b64decode(base64_str_a)
+                    contenido_peticion.append(types.Part.from_bytes(data=audio_data, mime_type="audio/m4a"))
+                except Exception as aud_err:
+                    print(f"Error procesando audio: {aud_err}")
+                    raise HTTPException(status_code=400, detail="El formato de audio no es válido.")
 
             chat = client.chats.create(model='gemini-2.5-flash', config=config, history=history_gemini)
             response = chat.send_message(contenido_peticion)
