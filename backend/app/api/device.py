@@ -83,6 +83,7 @@ def receive_lecturas(
         nivel_luz=lectura.nivel_luz,
         nivel_agua=lectura.nivel_agua,
         voltaje_bateria=lectura.voltaje_bateria,
+        porcentaje_bateria=lectura.porcentaje_bateria,
     )
     db.add(nueva_lectura)
     db.commit()

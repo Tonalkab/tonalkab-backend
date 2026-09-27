@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship  # <-- 1. Importar relationship
 from datetime import datetime
 from app.db import Base
@@ -21,6 +21,8 @@ class Maceta(Base):
     id_estado_dispositivo = Column(Integer, nullable=False, default=2)  # 2 = desconectado
     
     fecha_registro = Column(DateTime, default=datetime.utcnow)
+    
+    eliminado = Column(Boolean, default=False, nullable=False)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)

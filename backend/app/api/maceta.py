@@ -37,7 +37,8 @@ def verificar_propiedad_maceta(id_maceta: int, id_usuario: int, db: Session):
     """Verifica que la maceta exista y pertenezca al usuario autenticado"""
     maceta = db.query(Maceta).filter(
         Maceta.id_maceta == id_maceta, 
-        Maceta.id_usuario == id_usuario
+        Maceta.id_usuario == id_usuario,
+        Maceta.eliminado == False
     ).first()
     
     if not maceta:
@@ -106,7 +107,8 @@ def listar_macetas(
 ):
     """Retorna todas las macetas que pertenecen al usuario autenticado."""
     macetas = db.query(Maceta).filter(
-        Maceta.id_usuario == current_user.id_usuario
+        Maceta.id_usuario == current_user.id_usuario,
+        Maceta.eliminado == False
     ).all()
     
     return macetas
@@ -125,7 +127,8 @@ def obtener_dashboard_macetas(
     Optimiza el consumo en la app móvil evitando consultas en bucle.
     """
     macetas = db.query(Maceta).filter(
-        Maceta.id_usuario == current_user.id_usuario
+        Maceta.id_usuario == current_user.id_usuario,
+        Maceta.eliminado == False
     ).all()
 
     ahora = datetime.utcnow()
@@ -390,3 +393,22 @@ def forzar_riego_edge(
         "message": "Señal enviada con éxito.",
         "nota": mensaje_nota
     }
+# ==========================================
+# ENDPOINT: Eliminar Maceta (Soft Delete)
+# ==========================================
+@router.delete('/{id_maceta}')
+def eliminar_maceta(
+    id_maceta: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    '''
+    Marca una maceta como eliminada de forma lógica (soft delete)
+    para que ya no aparezca en la app pero conserve el historial de datos.
+    '''
+    maceta = verificar_propiedad_maceta(id_maceta, current_user.id_usuario, db)
+    
+    maceta.eliminado = True
+    db.commit()
+    
+    return {'detail': 'Maceta eliminada correctamente.'}

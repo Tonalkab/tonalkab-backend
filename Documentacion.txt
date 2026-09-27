@@ -2468,3 +2468,18 @@ REGLA DE ASISTENCIA: Cualquier recomendación de arquitectura, nuevo endpoint o 
   - Herramientas: Ejecuta funciones nativas (consultar_mis_plantas y forzar_riego_fisico) usando un inyector de seguridad por Closure para proteger los id_usuario.
   - Motores Multi-LLM: Implementa Gemini (2.5-flash) como base predeterminada y Groq (llama-3) como fallback con reconocimiento de imágenes dinámico.
   - Text-To-Speech: La aplicación móvil ahora incorpora expo-speech en TonalliScreen.js para vocalizar automáticamente las respuestas de la IA de forma nativa.
+
+
+---
+
+### Actualizacion Reciente: Soporte de Bateria, Modo Voz y Hub de Juegos
+
+1. **LecturaSensores (models/lectura.py y schemas/device.py)**
+   - Se anadio la columna porcentaje_bateria (DECIMAL(5,2)) para almacenar el nivel de carga reportado por el MAX17043 del ESP32.
+
+2. **Endpoint de IA - Modo Voz (api/bot.py)**
+   - Se actualizo el esquema BotChatRequest para aceptar el parametro udio_base64.
+   - Se integro la capacidad de decodificar audio (.m4a/.mp4) y enviarlo nativamente a Gemini 2.5 Flash, habilitando el Modo Voz inmersivo.
+
+3. **Arquitectura Arcade (En progreso)**
+   - Se planteo la integracion de la tabla PuntuacionesJuego (futura) para persistir monedas y records de minijuegos.
