@@ -14,7 +14,10 @@ from app.models.configuracion_maceta import ConfiguracionMaceta
 # HERRAMIENTA 1: Ojo y Cerebro (Lectura de Datos)
 # =======================================================
 def consultar_mis_plantas(id_usuario: int, db: Session):
-    macetas = db.query(Maceta).filter(Maceta.id_usuario == id_usuario).all()
+    macetas = db.query(Maceta).filter(
+        Maceta.id_usuario == id_usuario,
+        Maceta.eliminado == False
+    ).all()
     if not macetas:
         return "El usuario aún no tiene macetas registradas."
 
@@ -64,8 +67,12 @@ def forzar_riego_fisico(id_maceta: int, mililitros: float, id_usuario: int, db: 
     """
     Herramienta que la IA usa para activar la bomba de agua del ESP32.
     """
-    # 1. Validar que la maceta sea de este usuario
-    maceta = db.query(Maceta).filter(Maceta.id_maceta == id_maceta, Maceta.id_usuario == id_usuario).first()
+    # 1. Validar que la maceta sea de este usuario y no esté eliminada
+    maceta = db.query(Maceta).filter(
+        Maceta.id_maceta == id_maceta, 
+        Maceta.id_usuario == id_usuario,
+        Maceta.eliminado == False
+    ).first()
     if not maceta:
         return "Error de seguridad: La maceta no existe o no te pertenece."
     
